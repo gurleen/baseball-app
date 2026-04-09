@@ -35,14 +35,21 @@ function LiveGameSummary() {
 
     return (
         <div className="flex flex-col">
-            <div className="grid grid-cols-9 items-center">
-                <TeamScoreBox team={gameData.gameData.teams.away} lineScore={gameData.liveData.linescore.teams.away} />
-                <GameStatusBox linescore={gameData.liveData.linescore} />
-                <TeamScoreBox team={gameData.gameData.teams.home} lineScore={gameData.liveData.linescore.teams.home} isHome />
-            </div>
+            <div className="flex justify-between items-center mb-10">
+                <div className="flex items-center">
+                    <div className="flex flex-col">
+                        <TeamScoreBox team={gameData.gameData.teams.away} lineScore={gameData.liveData.linescore.teams.away} />
+                        <TeamScoreBox team={gameData.gameData.teams.home} lineScore={gameData.liveData.linescore.teams.home} />
+                    </div>
 
-            <div className="w-full flex items-center justify-center mt-10">
-                <LinescoreTable linescore={gameData.liveData.linescore} awayTeam={gameData.gameData.teams.away} homeTeam={gameData.gameData.teams.home} />
+                    <div className="mx-5">
+                        <GameStatusBox linescore={gameData.liveData.linescore} />
+                    </div>
+                </div>
+
+                <div className="mx-5">
+                    <LinescoreTable linescore={gameData.liveData.linescore} awayTeam={gameData.gameData.teams.away} homeTeam={gameData.gameData.teams.home} />
+                </div>
             </div>
 
             {currentPlay && <MatchupRow />}
@@ -75,8 +82,8 @@ const CurrentMatchupStrikeZone = () => {
 
     return (
         <div className="mt-6 flex flex-wrap justify-center items-start gap-6 xl:flex-nowrap">
-            <StrikeZone strikeZoneTop={batter.strikeZoneTop} 
-                strikeZoneBottom={batter.strikeZoneBottom} 
+            <StrikeZone strikeZoneTop={batter.strikeZoneTop}
+                strikeZoneBottom={batter.strikeZoneBottom}
                 pitches={pitches}
                 width={STRIKE_ZONE_WIDTH}
                 className="border-2 border-slate-800" />
@@ -132,9 +139,7 @@ const PitchSequencePanel = ({ pitches, height, currentPlay, batterId, strikeZone
 }
 
 const MatchupRow = () => {
-    const gameData = useLiveGameContext();
-    const isHomeTeamAtBat = gameData.liveData.linescore.inningHalf === "Bottom";
-    const outerClasses = clsx("flex", "w-full", "justify-between", !isHomeTeamAtBat && "flex-row-reverse");
+    const outerClasses = clsx("flex", "w-full", "justify-center", "gap-25");
 
     return (
         <div className={outerClasses}>
@@ -146,18 +151,17 @@ const MatchupRow = () => {
 
 const CurrentPitcherCard = () => {
     const gameData = useLiveGameContext();
-    const isHomeTeamAtBat = gameData.liveData.linescore.inningHalf === "Bottom";
 
     const currentPlay = gameData.liveData.plays.currentPlay;
-    if(!currentPlay) { return null; }
+    if (!currentPlay) { return null; }
 
     const pitcher = getPlayerFromGumbo(gameData, currentPlay.matchup.pitcher.id);
     if (!pitcher) { return null; }
 
     const stats = getPitcherStatsFromGumbo(gameData, pitcher.id);
 
-    const headerTextCss = clsx("text-sm", "text-neutral-600", !isHomeTeamAtBat && "text-right");
-    const infoBoxCss = clsx("flex", !isHomeTeamAtBat && "flex-row-reverse", !isHomeTeamAtBat && "text-right");
+    const headerTextCss = clsx("text-sm", "text-neutral-600");
+    const infoBoxCss = clsx("flex");
 
     return (
         <div className="flex flex-col gap-2">
@@ -180,10 +184,9 @@ const CurrentPitcherCard = () => {
 
 const CurrentBatterCard = () => {
     const gameData = useLiveGameContext();
-    const isHomeTeamAtBat = gameData.liveData.linescore.inningHalf === "Bottom";
 
     const currentPlay = gameData.liveData.plays.currentPlay;
-    if(!currentPlay) { return null; }
+    if (!currentPlay) { return null; }
 
     const batter = getPlayerFromGumbo(gameData, currentPlay.matchup.batter.id);
     if (!batter) { return null; }
@@ -192,15 +195,15 @@ const CurrentBatterCard = () => {
 
     return (
         <div className="flex flex-col gap-2">
-            <p className={clsx("text-sm", "text-neutral-600", isHomeTeamAtBat && "text-right")}>BATTING</p>
-            <div className={clsx("flex", isHomeTeamAtBat && "flex-row-reverse", isHomeTeamAtBat && "text-right")}>
+            <p className={clsx("text-sm", "text-neutral-600")}>BATTING</p>
+            <div className={clsx("flex")}>
                 <PlayerImage playerId={batter.id} size={75} />
                 <div className="flex flex-col">
                     <p className="text-lg">
                         <span>{batter.firstName}</span>
                         <span className="font-bold"> {batter.lastName}</span>
                         <span className="ms-2 text-stone-500 text-sm">
-                             <span className={clsx(batter.batSide.code == "R" && "hidden")}>({batter.batSide.code}) </span>
+                            <span className={clsx(batter.batSide.code == "R" && "hidden")}>({batter.batSide.code}) </span>
                             {batter.primaryPosition.abbreviation}
                         </span>
                     </p>
@@ -307,7 +310,7 @@ const TeamScoreBox = ({ team, lineScore, isHome }: { team: TeamData, lineScore: 
                     <TeamRecord team={team} />
                 </div>
             </div>
-            <div>
+            <div className="ms-15 me-5">
                 <p className="font-bold text-5xl bg-slate-900 text-white px-4 py-1">{lineScore.runs}</p>
             </div>
         </div>
