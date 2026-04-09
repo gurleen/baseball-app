@@ -7,6 +7,7 @@ import { TeamLogo } from "@/components/TeamLogo";
 import clsx from "clsx";
 import { BaseballDiamond, BaseballOuts } from "@/components/Baseball";
 import { PlayerImage } from "@/components/PlayerImg";
+import PlaySummaryCard from "@/components/PlaySummaryCard";
 import { HorizontalDivider } from "@/components/Util";
 import PreviousPlaysList from "@/components/PreviousPlaysList";
 import StrikeZone, { getStrikeZoneHeight } from "@/components/StrikeZone";
@@ -165,17 +166,13 @@ const PitchSequenceTable = ({ pitches, height, currentPlay, batterId }: { pitche
                         {showCompletedResult && (
                             <tr className="border-t border-slate-300 align-top">
                                 <td colSpan={6} className="p-3">
-                                    <div className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-3 shadow-sm">
-                                        <div className="flex items-start gap-3">
-                                            <PlayerImage playerId={batterId} size={50} />
-                                            <div className="min-w-0 flex-1">
-                                                <span className="inline-flex rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
-                                                    {resultBadgeLabel}
-                                                </span>
-                                                <p className="mt-2 text-sm leading-5 text-slate-700">{resultDescription}</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <PlaySummaryCard
+                                        badgeLabel={resultBadgeLabel}
+                                        description={resultDescription}
+                                        playerId={batterId}
+                                        className="border-slate-300 bg-slate-50"
+                                        badgeClassName="bg-slate-900"
+                                    />
                                 </td>
                             </tr>
                         )}

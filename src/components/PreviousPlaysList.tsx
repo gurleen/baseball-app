@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { PlayerImage } from "@/components/PlayerImg";
+import PlaySummaryCard from "@/components/PlaySummaryCard";
 import { getPlayerFromGumbo, type GumboFeed, type Play, type PlayEvent } from "@/types/gumbo";
 
 interface PreviousPlaysListProps {
@@ -181,17 +181,15 @@ export default function PreviousPlaysList({ gameData, height }: PreviousPlaysLis
 							}
 
 							return (
-								<div key={item.id} className={clsx("rounded-lg border px-3 py-3 shadow-sm", styles.container)}>
-									<div className="flex items-start gap-3">
-										{typeof playerId === "number" ? <PlayerImage playerId={playerId} size={50} /> : <div className="h-12.5 w-12.5 rounded-full bg-white/70 ring-1 ring-black/5" />}
-										<div className="min-w-0 flex-1">
-											<span className={clsx("inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]", styles.badge)}>
-												{getSpecialEventBadgeLabel(item.event)}
-											</span>
-											<p className="mt-2 text-sm leading-5 text-slate-700">{description}</p>
-										</div>
-									</div>
-								</div>
+								<PlaySummaryCard
+									key={item.id}
+									badgeLabel={getSpecialEventBadgeLabel(item.event)}
+									description={description}
+									playerId={playerId}
+									className={styles.container}
+									badgeClassName={styles.badge}
+									fallbackAvatarClassName="bg-white/70 ring-1 ring-black/5"
+								/>
 							);
 						}
 
@@ -200,17 +198,14 @@ export default function PreviousPlaysList({ gameData, height }: PreviousPlaysLis
 						const description = item.play.result.description ?? "No description available.";
 
 						return (
-							<div key={item.id} className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
-								<div className="flex items-start gap-3">
-									{batter ? <PlayerImage playerId={batter.id} size={50} /> : <div className="h-12.5 w-12.5 rounded-full bg-slate-200" />}
-									<div className="min-w-0 flex-1">
-										<span className="inline-flex rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
-											{badgeLabel}
-										</span>
-										<p className="mt-2 text-sm leading-5 text-slate-700">{description}</p>
-									</div>
-								</div>
-							</div>
+							<PlaySummaryCard
+								key={item.id}
+								badgeLabel={badgeLabel}
+								description={description}
+								playerId={batter?.id}
+								className="border-slate-200 bg-white"
+								badgeClassName="bg-slate-900"
+							/>
 						);
 					})}
 				</div>
