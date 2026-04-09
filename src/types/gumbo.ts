@@ -1506,10 +1506,9 @@ export type MatchupPitch = {
   count?: string;
 };
 
-export const getCurrentMatchupPitches = (gumbo: GumboFeed): MatchupPitch[] => {
-  const currentPlay = gumbo.liveData.plays.currentPlay;
-  if (!currentPlay) return [];
-  const pitches = currentPlay.playEvents.filter(event => event.isPitch);
+export const getMatchupPitchesFromPlay = (play: Play): MatchupPitch[] => {
+  const pitches = play.playEvents.filter(event => event.isPitch);
+
   return pitches.reduce<MatchupPitch[]>((allPitches, pitch) => {
     if (!pitch.pitchData) {
       return allPitches;
@@ -1529,4 +1528,10 @@ export const getCurrentMatchupPitches = (gumbo: GumboFeed): MatchupPitch[] => {
     allPitches.push(matchupPitch);
     return allPitches;
   }, []);
+}
+
+export const getCurrentMatchupPitches = (gumbo: GumboFeed): MatchupPitch[] => {
+  const currentPlay = gumbo.liveData.plays.currentPlay;
+  if (!currentPlay) return [];
+  return getMatchupPitchesFromPlay(currentPlay);
 }

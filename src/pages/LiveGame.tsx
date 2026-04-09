@@ -2,53 +2,18 @@ import { createContext, useContext } from "react";
 import { useParams } from "react-router";
 import { NotFoundRedirect } from "./NotFound";
 import { useGameData } from "@/hooks/useGameData";
-import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getHitDataFromPlay, getPitchCodeFromName, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type Linescore, type MatchupPitch, type Play, type TeamData, type TeamLineScore } from "@/types/gumbo";
+import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getHitDataFromPlay, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type MatchupPitch, type Linescore, type Play, type TeamData, type TeamLineScore } from "@/types/gumbo";
 import { TeamLogo } from "@/components/TeamLogo";
 import clsx from "clsx";
 import { BaseballDiamond, BaseballOuts } from "@/components/Baseball";
 import { PlayerImage } from "@/components/PlayerImg";
+import PitchSequenceTable from "@/components/PitchSequenceTable";
 import PlaySummaryCard from "@/components/PlaySummaryCard";
 import PreviousPlaysList from "@/components/PreviousPlaysList";
 import StrikeZone, { getStrikeZoneHeight } from "@/components/StrikeZone";
 
 const GameDataContext = createContext<GumboFeed | null>(null);
 const STRIKE_ZONE_WIDTH = 350;
-
-const getPitchSequenceColor = (pitch: MatchupPitch) => {
-    if (pitch.isInPlay && pitch.isOut) {
-        return "bg-violet-600";
-    }
-
-    if (pitch.isInPlay) {
-        return "bg-blue-600";
-    }
-
-    if (pitch.isStrike) {
-        return "bg-red-600";
-    }
-
-    if (pitch.isBall) {
-        return "bg-green-600";
-    }
-
-    return "bg-slate-700";
-};
-
-const formatPitchBreak = (value?: number) => {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-        return "-";
-    }
-
-    return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
-};
-
-const formatPitchType = (pitchType?: string) => {
-    if (!pitchType) {
-        return "-";
-    }
-
-    return getPitchCodeFromName(pitchType) ?? pitchType;
-};
 
 const hasCompletedPlayResult = (play: Play) => {
     return play.about.isComplete && (Boolean(play.result.event) || Boolean(play.result.eventType) || Boolean(play.result.description));
@@ -116,13 +81,20 @@ const CurrentMatchupStrikeZone = () => {
                 width={STRIKE_ZONE_WIDTH}
                 className="border-2 border-slate-800" />
 
-            <PitchSequenceTable pitches={pitches} height={strikeZoneHeight} currentPlay={currentPlay} batterId={batter.id} />
+            <PitchSequencePanel
+                pitches={pitches}
+                height={strikeZoneHeight}
+                currentPlay={currentPlay}
+                batterId={batter.id}
+                strikeZoneTop={batter.strikeZoneTop}
+                strikeZoneBottom={batter.strikeZoneBottom}
+            />
             <PreviousPlaysList gameData={gameData} height={strikeZoneHeight} />
         </div>
     );
 }
 
-const PitchSequenceTable = ({ pitches, height, currentPlay, batterId }: { pitches: MatchupPitch[]; height: number; currentPlay: Play; batterId: number }) => {
+const PitchSequencePanel = ({ pitches, height, currentPlay, batterId, strikeZoneTop, strikeZoneBottom }: { pitches: MatchupPitch[]; height: number; currentPlay: Play; batterId: number; strikeZoneTop: number; strikeZoneBottom: number }) => {
     const showCompletedResult = hasCompletedPlayResult(currentPlay);
     const resultBadgeLabel = currentPlay.result.event ?? currentPlay.result.eventType ?? "Play Result";
     const resultDescription = currentPlay.result.description ?? "No description available.";
@@ -134,51 +106,26 @@ const PitchSequenceTable = ({ pitches, height, currentPlay, batterId }: { pitche
                 <p className="text-sm font-semibold tracking-wide text-slate-700">Pitch Sequence</p>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
-                <table className="w-full table-fixed text-left text-sm">
-                    <thead className="sticky top-0 bg-slate-100 text-slate-600">
-                        <tr>
-                            <th className="w-14 px-4 py-2 font-semibold">#</th>
-                            <th className="w-20 px-3 py-2 font-semibold">Velo</th>
-                            <th className="w-20 px-3 py-2 font-semibold">Type</th>
-                            <th className="w-18 px-3 py-2 font-semibold">Count</th>
-                            <th className="w-20 px-3 py-2 font-semibold">H-Break</th>
-                            <th className="w-20 px-3 py-2 font-semibold">V-Break</th>
+                <PitchSequenceTable
+                    pitches={pitches}
+                    stickyHeader
+                    resultRow={showCompletedResult ? (
+                        <tr className="border-t border-slate-300 align-top">
+                            <td colSpan={6} className="p-3">
+                                <PlaySummaryCard
+                                    badgeLabel={resultBadgeLabel}
+                                    description={resultDescription}
+                                    playerId={batterId}
+                                    hitData={hitData}
+                                    strikeZoneTop={strikeZoneTop}
+                                    strikeZoneBottom={strikeZoneBottom}
+                                    className="border-slate-300 bg-slate-50"
+                                    badgeClassName="bg-slate-900"
+                                />
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {pitches.map((pitch, index) => (
-                            <tr key={`${index}-${pitch.pitchData.startSpeed ?? "pitch"}`} className="border-t border-slate-200 align-top">
-                                <td className="px-4 py-2 font-semibold text-slate-700">
-                                    <div className="flex items-center gap-2">
-                                        <span className={clsx("inline-block h-3 w-3 rounded-full", getPitchSequenceColor(pitch))}></span>
-                                        <span>{index + 1}</span>
-                                    </div>
-                                </td>
-                                <td className="px-3 py-2 text-slate-700">
-                                    {pitch.pitchData.startSpeed != null ? `${Math.round(pitch.pitchData.startSpeed)} mph` : "-"}
-                                </td>
-                                <td className="px-3 py-2 text-slate-700">{formatPitchType(pitch.pitchType)}</td>
-                                <td className="px-3 py-2 text-slate-700">{pitch.count ?? "-"}</td>
-                                <td className="px-3 py-2 text-slate-700">{formatPitchBreak(pitch.pitchData.breaks?.breakHorizontal)}</td>
-                                <td className="px-3 py-2 text-slate-700">{formatPitchBreak(pitch.pitchData.breaks?.breakVertical)}</td>
-                            </tr>
-                        ))}
-                        {showCompletedResult && (
-                            <tr className="border-t border-slate-300 align-top">
-                                <td colSpan={6} className="p-3">
-                                    <PlaySummaryCard
-                                        badgeLabel={resultBadgeLabel}
-                                        description={resultDescription}
-                                        playerId={batterId}
-                                        hitData={hitData}
-                                        className="border-slate-300 bg-slate-50"
-                                        badgeClassName="bg-slate-900"
-                                    />
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                    ) : undefined}
+                />
             </div>
         </div>
     );
