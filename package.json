@@ -1,0 +1,28 @@
+{
+  "name": "bun-react-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot src/index.tsx",
+    "start": "NODE_ENV=production bun src/index.tsx",
+    "build": "bun run build.ts",
+    "validate-gumbo": "bun run scripts/validate-gumbo.ts"
+  },
+  "dependencies": {
+    "bun-plugin-tailwind": "^0.0.15",
+    "clsx": "^2.1.1",
+    "fast-json-patch": "^3.1.1",
+    "react": "^19",
+    "react-dom": "^19",
+    "react-router": "^7.13.2",
+    "tailwindcss": "^4.1.11",
+    "usehooks-ts": "^3.1.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/bun": "latest"
+  }
+}

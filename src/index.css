@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+.font-mono {
+    font-family: 'Berkeley Mono Variable', monospace;
+}
