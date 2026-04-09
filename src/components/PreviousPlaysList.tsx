@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import PlaySummaryCard from "@/components/PlaySummaryCard";
-import { getPlayerFromGumbo, type GumboFeed, type Play, type PlayEvent } from "@/types/gumbo";
+import { getHitDataFromPlay, getPlayerFromGumbo, type GumboFeed, type Play, type PlayEvent } from "@/types/gumbo";
 
 interface PreviousPlaysListProps {
 	gameData: GumboFeed;
@@ -196,6 +196,7 @@ export default function PreviousPlaysList({ gameData, height }: PreviousPlaysLis
 						const batter = getPlayerFromGumbo(gameData, item.play.matchup.batter.id);
 						const badgeLabel = getPlayBadgeLabel(item.play);
 						const description = item.play.result.description ?? "No description available.";
+						const hitData = getHitDataFromPlay(item.play);
 
 						return (
 							<PlaySummaryCard
@@ -203,6 +204,7 @@ export default function PreviousPlaysList({ gameData, height }: PreviousPlaysLis
 								badgeLabel={badgeLabel}
 								description={description}
 								playerId={batter?.id}
+								hitData={hitData}
 								className="border-slate-200 bg-white"
 								badgeClassName="bg-slate-900"
 							/>

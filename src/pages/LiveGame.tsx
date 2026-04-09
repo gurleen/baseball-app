@@ -2,13 +2,12 @@ import { createContext, useContext } from "react";
 import { useParams } from "react-router";
 import { NotFoundRedirect } from "./NotFound";
 import { useGameData } from "@/hooks/useGameData";
-import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getPitchCodeFromName, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type Linescore, type MatchupPitch, type Play, type TeamData, type TeamLineScore } from "@/types/gumbo";
+import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getHitDataFromPlay, getPitchCodeFromName, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type Linescore, type MatchupPitch, type Play, type TeamData, type TeamLineScore } from "@/types/gumbo";
 import { TeamLogo } from "@/components/TeamLogo";
 import clsx from "clsx";
 import { BaseballDiamond, BaseballOuts } from "@/components/Baseball";
 import { PlayerImage } from "@/components/PlayerImg";
 import PlaySummaryCard from "@/components/PlaySummaryCard";
-import { HorizontalDivider } from "@/components/Util";
 import PreviousPlaysList from "@/components/PreviousPlaysList";
 import StrikeZone, { getStrikeZoneHeight } from "@/components/StrikeZone";
 
@@ -127,6 +126,7 @@ const PitchSequenceTable = ({ pitches, height, currentPlay, batterId }: { pitche
     const showCompletedResult = hasCompletedPlayResult(currentPlay);
     const resultBadgeLabel = currentPlay.result.event ?? currentPlay.result.eventType ?? "Play Result";
     const resultDescription = currentPlay.result.description ?? "No description available.";
+    const hitData = getHitDataFromPlay(currentPlay);
 
     return (
         <div className="flex min-w-[320px] max-w-lg flex-col overflow-hidden border border-slate-300 bg-white/80" style={{ height }}>
@@ -170,6 +170,7 @@ const PitchSequenceTable = ({ pitches, height, currentPlay, batterId }: { pitche
                                         badgeLabel={resultBadgeLabel}
                                         description={resultDescription}
                                         playerId={batterId}
+                                        hitData={hitData}
                                         className="border-slate-300 bg-slate-50"
                                         badgeClassName="bg-slate-900"
                                     />

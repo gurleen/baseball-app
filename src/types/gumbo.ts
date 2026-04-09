@@ -1483,6 +1483,18 @@ export const getPitchCodeFromName = (pitchName: string): string | null => {
   return PITCH_NAME_TO_CODE[normalizedPitchName] ?? null;
 }
 
+export const getHitDataFromPlay = (play: Play): HitData | null => {
+  for (let index = play.playEvents.length - 1; index >= 0; index -= 1) {
+    const hitData = play.playEvents[index]?.hitData;
+
+    if (hitData) {
+      return hitData;
+    }
+  }
+
+  return null;
+}
+
 export type MatchupPitch = {
   pitchData: PitchData;
   isStrike?: boolean;
