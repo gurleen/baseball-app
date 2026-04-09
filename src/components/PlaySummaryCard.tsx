@@ -12,14 +12,6 @@ interface PlaySummaryCardProps {
     fallbackAvatarClassName?: string;
 }
 
-const formatHitMetric = (label: string, value: number | undefined, suffix: string) => {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-        return null;
-    }
-
-    return `${label} ${Math.round(value)}${suffix}`;
-};
-
 export default function PlaySummaryCard({
     badgeLabel,
     description,
