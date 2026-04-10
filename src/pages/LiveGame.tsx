@@ -178,6 +178,8 @@ const CurrentPitcherCard = () => {
     if (!pitcher) { return null; }
 
     const stats = getPitcherStatsFromGumbo(gameData, pitcher.id);
+    const numPitches = stats?.pitchesThrown ?? 0;
+    const numStrikes = stats?.strikes ?? 0;
 
     const headerTextCss = clsx("text-sm", "text-neutral-600");
     const infoBoxCss = clsx("flex");
@@ -194,7 +196,7 @@ const CurrentPitcherCard = () => {
                         <span className="text-stone-500 text-sm"> {pitcher.pitchHand.code}HP</span>
                     </p>
                     <p className="text-md">{stats?.summary}</p>
-                    <p className="text-md">{stats?.pitchesThrown} PIT ({stats?.strikes} STR)</p>
+                    <p className="text-md">{numPitches} PIT ({numStrikes} STR)</p>
                 </div>
             </div>
         </div>
