@@ -39,7 +39,7 @@ export default function Home() {
   useInterval(refetch, 10 * 1000);
 
   return (
-    <main className="h-full py-10 px-10 border-2 border-neutral-200 bg-gray-500/10 drop-shadow-gray-900 drop-shadow-xl/40">
+    <main className="h-full w-full md:py-10 md:px-10 border-2 border-neutral-200 bg-gray-500/10 drop-shadow-gray-900 drop-shadow-xl/40">
       <HomeHeader
         isRefreshing={isRefreshing}
         lastRefreshedLabel={lastRefreshedLabel}

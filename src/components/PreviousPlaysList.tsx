@@ -151,7 +151,7 @@ export default function PreviousPlaysList({ gameData, height }: PreviousPlaysLis
 	const items = buildPreviousPlayList(previousPlays, gameData.liveData.plays.currentPlay);
 
 	return (
-		<div className="flex min-w-[320px] max-w-full flex-col overflow-hidden border border-slate-300 bg-white/80" style={{ height }}>
+		<div className="flex w-full max-w-lg flex-col overflow-hidden border border-slate-300 bg-white/80 xl:max-w-2xl xl:flex-[1.25]" style={{ height }}>
 			<div className="border-b border-slate-300 px-4 py-3">
 				<p className="text-sm font-semibold tracking-wide text-slate-700">Previous Plays</p>
 			</div>

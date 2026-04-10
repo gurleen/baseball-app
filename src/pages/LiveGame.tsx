@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { NotFoundRedirect } from "./NotFound";
 import { useGameData } from "@/hooks/useGameData";
@@ -13,7 +13,8 @@ import PreviousPlaysList from "@/components/PreviousPlaysList";
 import StrikeZone, { getStrikeZoneHeight } from "@/components/StrikeZone";
 
 const GameDataContext = createContext<GumboFeed | null>(null);
-const STRIKE_ZONE_WIDTH = 350;
+const DESKTOP_STRIKE_ZONE_WIDTH = 350;
+const MOBILE_STRIKE_ZONE_WIDTH = 280;
 
 const hasCompletedPlayResult = (play: Play) => {
     return play.about.isComplete && (Boolean(play.result.event) || Boolean(play.result.eventType) || Boolean(play.result.description));
@@ -34,20 +35,20 @@ function LiveGameSummary() {
     const currentPlay = gameData.liveData.plays.currentPlay;
 
     return (
-        <div className="flex flex-col">
-            <div className="flex justify-between items-center mb-10">
-                <div className="flex items-center">
-                    <div className="flex flex-col">
+        <div className="flex flex-col items-center gap-8">
+            <div className="flex w-full flex-col items-center gap-6 2xl:flex-row 2xl:items-center 2xl:justify-center 2xl:gap-10">
+                <div className="flex w-full flex-col items-center gap-6 2xl:w-auto 2xl:min-w-0 2xl:flex-row 2xl:items-center 2xl:justify-center">
+                    <div className="flex w-full max-w-4xl flex-col gap-3">
                         <TeamScoreBox team={gameData.gameData.teams.away} lineScore={gameData.liveData.linescore.teams.away} />
                         <TeamScoreBox team={gameData.gameData.teams.home} lineScore={gameData.liveData.linescore.teams.home} />
                     </div>
 
-                    <div className="mx-5">
+                    <div className="flex justify-center">
                         <GameStatusBox linescore={gameData.liveData.linescore} />
                     </div>
                 </div>
 
-                <div className="mx-5">
+                <div className="flex w-full justify-center overflow-x-auto 2xl:w-auto 2xl:flex-none">
                     <LinescoreTable linescore={gameData.liveData.linescore} awayTeam={gameData.gameData.teams.away} homeTeam={gameData.gameData.teams.home} />
                 </div>
             </div>
@@ -61,6 +62,24 @@ function LiveGameSummary() {
 const CurrentMatchupStrikeZone = () => {
     const gameData = useLiveGameContext();
     const currentPlay = gameData.liveData.plays.currentPlay;
+    const [strikeZoneWidth, setStrikeZoneWidth] = useState(() => {
+        if (typeof window === "undefined") {
+            return DESKTOP_STRIKE_ZONE_WIDTH;
+        }
+
+        return window.innerWidth < 640 ? MOBILE_STRIKE_ZONE_WIDTH : DESKTOP_STRIKE_ZONE_WIDTH;
+    });
+
+    useEffect(() => {
+        const updateStrikeZoneWidth = () => {
+            setStrikeZoneWidth(window.innerWidth < 640 ? MOBILE_STRIKE_ZONE_WIDTH : DESKTOP_STRIKE_ZONE_WIDTH);
+        };
+
+        updateStrikeZoneWidth();
+        window.addEventListener("resize", updateStrikeZoneWidth);
+
+        return () => window.removeEventListener("resize", updateStrikeZoneWidth);
+    }, []);
 
     if (!currentPlay) {
         return null;
@@ -77,15 +96,15 @@ const CurrentMatchupStrikeZone = () => {
     const strikeZoneHeight = getStrikeZoneHeight({
         strikeZoneTop: batter.strikeZoneTop,
         strikeZoneBottom: batter.strikeZoneBottom,
-        width: STRIKE_ZONE_WIDTH,
+        width: strikeZoneWidth,
     });
 
     return (
-        <div className="mt-6 flex flex-wrap justify-center items-start gap-6 xl:flex-nowrap">
+        <div className="mt-6 flex w-full flex-col items-center gap-6 xl:flex-row xl:flex-wrap xl:items-start xl:justify-center 2xl:flex-nowrap 2xl:justify-center">
             <StrikeZone strikeZoneTop={batter.strikeZoneTop}
                 strikeZoneBottom={batter.strikeZoneBottom}
                 pitches={pitches}
-                width={STRIKE_ZONE_WIDTH}
+                width={strikeZoneWidth}
                 className="border-2 border-slate-800" />
 
             <PitchSequencePanel
@@ -108,7 +127,7 @@ const PitchSequencePanel = ({ pitches, height, currentPlay, batterId, strikeZone
     const hitData = getHitDataFromPlay(currentPlay);
 
     return (
-        <div className="flex min-w-[320px] max-w-lg flex-col overflow-hidden border border-slate-300 bg-white/80" style={{ height }}>
+        <div className="flex w-full max-w-lg flex-col overflow-hidden border border-slate-300 bg-white/80" style={{ height }}>
             <div className="border-b border-slate-300 px-4 py-3">
                 <p className="text-sm font-semibold tracking-wide text-slate-700">Pitch Sequence</p>
             </div>
@@ -139,7 +158,7 @@ const PitchSequencePanel = ({ pitches, height, currentPlay, batterId, strikeZone
 }
 
 const MatchupRow = () => {
-    const outerClasses = clsx("flex", "w-full", "justify-center", "gap-25");
+    const outerClasses = clsx("flex", "w-full", "flex-col", "items-center", "gap-6", "lg:flex-row", "lg:flex-wrap", "lg:justify-center", "lg:gap-16");
 
     return (
         <div className={outerClasses}>
@@ -164,9 +183,9 @@ const CurrentPitcherCard = () => {
     const infoBoxCss = clsx("flex");
 
     return (
-        <div className="flex flex-col gap-2">
+        <div className="flex w-full max-w-md flex-col items-center gap-2 text-center lg:items-start lg:text-left">
             <p className={headerTextCss}>PITCHING</p>
-            <div className={infoBoxCss}>
+            <div className={clsx(infoBoxCss, "items-center gap-3") }>
                 <PlayerImage playerId={pitcher.id} size={75} />
                 <div className="flex flex-col">
                     <p className="text-lg">
@@ -194,9 +213,9 @@ const CurrentBatterCard = () => {
     const stats = getBatterStatsFromGumbo(gameData, batter.id);
 
     return (
-        <div className="flex flex-col gap-2">
+        <div className="flex w-full max-w-md flex-col items-center gap-2 text-center lg:items-start lg:text-left">
             <p className={clsx("text-sm", "text-neutral-600")}>BATTING</p>
-            <div className={clsx("flex")}>
+            <div className={clsx("flex", "items-center", "gap-3")}>
                 <PlayerImage playerId={batter.id} size={75} />
                 <div className="flex flex-col">
                     <p className="text-lg">
@@ -219,7 +238,7 @@ const LinescoreTable = ({ linescore, awayTeam, homeTeam }: { linescore: Linescor
     const isTopInning = linescore.inningHalf === "Top";
 
     return (
-        <table className="table-fixed text-lg text-center">
+        <table className="table-fixed text-lg text-center min-w-max">
             <thead>
                 <tr>
                     <th></th>
@@ -276,7 +295,7 @@ const GameStatusBox = ({ linescore }: { linescore: Linescore }) => {
     const count = balls != null && strikes != null ? `${balls}-${strikes}` : null;
 
     return (
-        <div className="flex flex-col justify-center items-center w-full gap-2">
+        <div className="flex w-full max-w-sm flex-col items-center justify-center gap-2 text-center">
             <p>{linescore.inningState} {linescore.currentInningOrdinal}</p>
             <GameBasesState linescore={linescore} />
             <BaseballOuts outs={linescore.outs ?? 0} />
@@ -298,19 +317,19 @@ const GameBasesState = ({ linescore }: { linescore: Linescore }) => {
 }
 
 const TeamScoreBox = ({ team, lineScore, isHome }: { team: TeamData, lineScore: TeamLineScore, isHome?: boolean }) => {
-    const leftHalfClasses = clsx("flex", "items-center", "w-full", isHome && "flex-row-reverse", isHome && "text-right");
-    const outerClasses = clsx("flex", "justify-center", "items-center", "col-span-4", "w-full", isHome && "flex-row-reverse", isHome && "text-right", isHome ? "ps-10" : "pe-10");
+    const leftHalfClasses = clsx("flex", "items-center", "justify-center", "gap-3", "w-full", isHome && "flex-row-reverse", isHome && "text-right", "sm:justify-start");
+    const outerClasses = clsx("flex", "w-full", "max-w-4xl", "flex-col", "items-center", "gap-3", "rounded-lg", "border", "border-slate-200", "bg-white/60", "px-4", "py-3", "sm:flex-row", "sm:justify-between", isHome && "sm:flex-row-reverse", isHome && "sm:text-right");
 
     return (
         <div className={outerClasses}>
             <div className={leftHalfClasses}>
                 <TeamLogo teamId={team.id} width={75} />
-                <div className="flex flex-col">
+                <div className="flex min-w-0 flex-col">
                     <TeamName team={team} />
                     <TeamRecord team={team} />
                 </div>
             </div>
-            <div className="ms-15 me-5">
+            <div>
                 <p className="font-bold text-5xl bg-slate-900 text-white px-4 py-1">{lineScore.runs}</p>
             </div>
         </div>
@@ -318,7 +337,7 @@ const TeamScoreBox = ({ team, lineScore, isHome }: { team: TeamData, lineScore: 
 }
 
 const TeamName = ({ team }: { team: TeamData }) => (
-    <p className="flex gap-2 text-lg">
+    <p className="flex flex-wrap gap-x-2 gap-y-1 text-lg leading-tight">
         {team.franchiseName}
         <span className="font-bold">{team.teamName}</span>
     </p>
@@ -344,7 +363,7 @@ export default function LiveGame() {
     const gameData = useGameData({ gameId });
 
     return (
-        <main className="h-full py-10 px-10 border-2 border-neutral-200 bg-gray-500/10 drop-shadow-gray-900 drop-shadow-xl/40 lg:mx-10 font-mono">
+        <main className="min-h-full px-3 py-6 md:px-8 md:py-10 border-2 border-neutral-200 bg-gray-500/10 drop-shadow-gray-900 drop-shadow-xl/40 lg:mx-10 font-mono">
             {gameData.isLoading && <p className="text-neutral-600">Loading game data...</p>}
             {gameData.error && <p className="text-red-600">Error loading game data: {gameData.error.message}</p>}
             {gameData.data && (
