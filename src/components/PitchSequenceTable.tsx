@@ -109,7 +109,10 @@ export default function PitchSequenceTable({
 			</thead>
 			<tbody>
 				{pitches.map((pitch, index) => (
-					<tr key={`${index}-${pitch.pitchData.startSpeed ?? "pitch"}`} className="border-t border-slate-200 align-top">
+					<tr
+						key={`${index}-${pitch.pitchData.startSpeed ?? "pitch"}`}
+						className="border-t border-slate-200 align-top odd:bg-white even:bg-slate-50"
+					>
 						<td className={numberCellClassName}>
 							<div className={clsx("flex items-center", compact ? "gap-1.5" : "gap-2")}>
 								<span className={clsx(dotClassName, getPitchSequenceColor(pitch))}></span>
