@@ -5,6 +5,10 @@
   "observability": {
     "enabled": true
   },
+  "route": {
+    "pattern": "gba.gurleen.net/*",
+    "zone_name": "gurleen.net",
+  },
   "assets": {
     "directory": "dist",
     "not_found_handling": "single-page-application"
