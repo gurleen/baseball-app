@@ -25,6 +25,7 @@ function formatRefreshTime(lastUpdatedAt: Date | null) {
   }).format(lastUpdatedAt);
 }
 
+
 export default function Home() {
   const today = todayString();
 

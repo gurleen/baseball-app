@@ -4,11 +4,25 @@ interface HomeHeaderProps {
   lastRefreshedLabel: string | null;
 }
 
+function getTimeOfDayGreeting(date = new Date()) {
+  const hour = date.getHours();
+
+  if (hour < 12) {
+    return "Good morning";
+  }
+
+  if (hour < 18) {
+    return "Good afternoon";
+  }
+
+  return "Good evening";
+}
+
 export function HomeHeader({ onRefresh, isRefreshing, lastRefreshedLabel }: HomeHeaderProps) {
   return (
-    <header className="mb-8 flex items-center justify-between gap-4">
+    <header className="mb-8 flex items-center justify-between gap-4 font-mono">
       <div>
-        <h1 className="text-4xl font-semibold text-neutral-950">Today&apos;s Games</h1>
+        <h1 className="text-4xl font-semibold text-neutral-950">{getTimeOfDayGreeting()}</h1>
         <p className="mt-2 text-sm text-neutral-600">
           {lastRefreshedLabel ? `Last refreshed at ${lastRefreshedLabel}` : "Waiting for first refresh..."}
         </p>

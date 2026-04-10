@@ -363,7 +363,7 @@ export default function LiveGame() {
     const gameData = useGameData({ gameId });
 
     return (
-        <main className="min-h-full px-3 py-6 md:px-8 md:py-10 border-2 border-neutral-200 bg-gray-500/10 drop-shadow-gray-900 drop-shadow-xl/40 lg:mx-10 font-mono">
+        <main className="min-h-full px-3 py-6 md:px-8 md:py-5 border-2 border-neutral-200 bg-gray-500/10 drop-shadow-gray-900 drop-shadow-xl/40 lg:mx-10 font-mono">
             {gameData.isLoading && <p className="text-neutral-600">Loading game data...</p>}
             {gameData.error && <p className="text-red-600">Error loading game data: {gameData.error.message}</p>}
             {gameData.data && (

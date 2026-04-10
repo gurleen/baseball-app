@@ -18,7 +18,7 @@ export function ScheduleGameGrid({ dateEntry }: ScheduleGameGridProps) {
   return (
     <section className="space-y-4 rounded">
       <div className="text-sm text-neutral-500">
-        {dateEntry.totalGames} game{dateEntry.totalGames === 1 ? "" : "s"} on {dateEntry.date}
+        There are {dateEntry.totalGames} game{dateEntry.totalGames === 1 ? "" : "s"} across Major League Baseball today.
       </div>
       <div className="flex flex-wrap gap-4">
         {games.map(game => (
