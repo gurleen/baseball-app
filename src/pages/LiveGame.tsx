@@ -357,7 +357,11 @@ export default function LiveGame() {
     const { gameId } = useParams();
 
     if (!gameId) {
-        return NotFoundRedirect();
+        return (
+            <div className="flex min-h-full items-center justify-center">
+                <p className="text-red-600">No game ID provided.</p>
+            </div>
+        );
     }
 
     const gameData = useGameData({ gameId });
