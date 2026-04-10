@@ -11,6 +11,7 @@ import PitchSequenceTable from "@/components/PitchSequenceTable";
 import PlaySummaryCard from "@/components/PlaySummaryCard";
 import PreviousPlaysList from "@/components/PreviousPlaysList";
 import StrikeZone, { getStrikeZoneHeight } from "@/components/StrikeZone";
+import { getScorecardCodeFromPlay } from "@/util/scorecard";
 
 const GameDataContext = createContext<GumboFeed | null>(null);
 const DESKTOP_STRIKE_ZONE_WIDTH = 350;
@@ -123,6 +124,7 @@ const CurrentMatchupStrikeZone = () => {
 const PitchSequencePanel = ({ pitches, height, currentPlay, batterId, strikeZoneTop, strikeZoneBottom }: { pitches: MatchupPitch[]; height: number; currentPlay: Play; batterId: number; strikeZoneTop: number; strikeZoneBottom: number }) => {
     const showCompletedResult = hasCompletedPlayResult(currentPlay);
     const resultBadgeLabel = currentPlay.result.event ?? currentPlay.result.eventType ?? "Play Result";
+    const scorecardCode = getScorecardCodeFromPlay(currentPlay);
     const resultDescription = currentPlay.result.description ?? "No description available.";
     const hitData = getHitDataFromPlay(currentPlay);
 
@@ -140,6 +142,7 @@ const PitchSequencePanel = ({ pitches, height, currentPlay, batterId, strikeZone
                             <td colSpan={6} className="p-3">
                                 <PlaySummaryCard
                                     badgeLabel={resultBadgeLabel}
+                                    scorecardCode={scorecardCode}
                                     description={resultDescription}
                                     playerId={batterId}
                                     hitData={hitData}

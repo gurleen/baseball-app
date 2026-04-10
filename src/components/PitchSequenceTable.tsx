@@ -47,12 +47,34 @@ const formatPitchType = (pitchType?: string) => {
 };
 
 const formatPitchSpeed = (speed?: number, compact?: boolean) => {
-    if (typeof speed !== "number" || !Number.isFinite(speed)) {
-        return "-";
-    }
+	if (typeof speed !== "number" || !Number.isFinite(speed)) {
+		return "-";
+	}
 
-    return `${speed.toFixed(1)}${compact ? "" : " mph"}`;
-}
+	return `${speed.toFixed(1)}${compact ? "" : " mph"}`;
+};
+
+const formatPitchResult = (result?: string) => {
+	if (!result) {
+		return "-";
+	}
+
+	return result;
+};
+
+const formatPitchResultAndCount = (pitch: MatchupPitch) => {
+	const result = formatPitchResult(pitch.result);
+
+	if (!pitch.count) {
+		return result;
+	}
+
+	if (result === "-") {
+		return pitch.count;
+	}
+
+	return `${result}, ${pitch.count}`;
+};
 
 export default function PitchSequenceTable({
 	pitches,
@@ -70,7 +92,7 @@ export default function PitchSequenceTable({
 	const firstColumnWidth = compact ? "w-12" : "w-14";
 	const veloWidth = compact ? "w-16" : "w-20";
 	const typeWidth = compact ? "w-16" : "w-20";
-	const countWidth = compact ? "w-16" : "w-18";
+	const resultWidth = compact ? "w-24" : "w-32";
 	const breakWidth = compact ? "w-18" : "w-20";
 
 	return (
@@ -80,9 +102,9 @@ export default function PitchSequenceTable({
 					<th className={clsx(firstColumnWidth, compact ? "px-2 py-2 font-semibold" : "px-4 py-2 font-semibold")}>#</th>
 					<th className={clsx(veloWidth, headerCellClassName)}>Velo</th>
 					<th className={clsx(typeWidth, headerCellClassName)}>Type</th>
-					<th className={clsx(countWidth, headerCellClassName)}>Count</th>
-					<th className={clsx(breakWidth, headerCellClassName)}>H-Break</th>
-					<th className={clsx(breakWidth, headerCellClassName)}>V-Break</th>
+					<th className={clsx(resultWidth, headerCellClassName)}>Result</th>
+					<th className={clsx(breakWidth, headerCellClassName)}>HB</th>
+					<th className={clsx(breakWidth, headerCellClassName)}>VB</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -98,7 +120,7 @@ export default function PitchSequenceTable({
 							{formatPitchSpeed(pitch.pitchData.startSpeed, compact)}
 						</td>
 						<td className={bodyCellClassName}>{formatPitchType(pitch.pitchType)}</td>
-						<td className={bodyCellClassName}>{pitch.count ?? "-"}</td>
+						<td className={clsx(bodyCellClassName, "whitespace-normal")}>{formatPitchResultAndCount(pitch)}</td>
 						<td className={bodyCellClassName}>{formatPitchBreak(pitch.pitchData.breaks?.breakHorizontal)}</td>
 						<td className={bodyCellClassName}>{formatPitchBreak(pitch.pitchData.breaks?.breakVertical)}</td>
 					</tr>
