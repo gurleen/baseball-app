@@ -25,7 +25,17 @@ type PreviousPlayListItem =
 		play: Play;
 	  };
 
-const SPECIAL_EVENT_TYPES = new Set(["pitching_substitution", "defensive_switch", "defensive_substitution", "mound_visit"]);
+const SPECIAL_EVENT_TYPES = new Set([
+	"pitching_substitution",
+	"defensive_switch",
+	"defensive_substitution",
+	"mound_visit",
+	"stolen_base",
+	"caught_stealing",
+	"pickoff_caught_stealing",
+]);
+
+const getNormalizedEventType = (event: PlayEvent) => event.details.eventType?.trim().toLowerCase().replaceAll(" ", "_");
 
 const formatInningLabel = (play: Play) => {
 	const half = play.about.halfInning === "top" ? "Top" : "Bottom";
@@ -35,33 +45,63 @@ const formatInningLabel = (play: Play) => {
 const getPlayBadgeLabel = (play: Play) => play.result.event ?? play.result.eventType ?? "Play";
 
 const getSpecialEventBadgeLabel = (event: PlayEvent) => {
-	if (event.details.eventType === "mound_visit") {
+	const eventType = getNormalizedEventType(event);
+
+	if (eventType === "mound_visit") {
 		return "Mound Visit";
 	}
 
-	if (event.details.eventType === "pitching_substitution") {
+	if (eventType === "pitching_substitution") {
 		return "Pitching Change";
 	}
 
-	if (event.details.eventType === "defensive_substitution" || event.details.eventType === "defensive_switch") {
+	if (eventType === "defensive_substitution" || eventType === "defensive_switch") {
 		return "Defensive Change";
+	}
+
+	if (eventType === "stolen_base") {
+		return "Stolen Base";
+	}
+
+	if (eventType === "caught_stealing") {
+		return "Caught Stealing";
+	}
+
+	if (eventType === "pickoff_caught_stealing") {
+		return "Pickoff Caught Stealing";
 	}
 
 	return event.details.event ?? "Update";
 };
 
 const getSpecialEventStyles = (event: PlayEvent) => {
-	if (event.details.eventType === "mound_visit") {
+	const eventType = getNormalizedEventType(event);
+
+	if (eventType === "mound_visit") {
 		return {
 			container: "border-amber-300 bg-amber-50",
 			badge: "bg-amber-700 text-white",
 		};
 	}
 
-	if (event.details.eventType === "pitching_substitution") {
+	if (eventType === "pitching_substitution") {
 		return {
 			container: "border-rose-300 bg-rose-50",
 			badge: "bg-rose-700 text-white",
+		};
+	}
+
+	if (eventType === "stolen_base") {
+		return {
+			container: "border-emerald-300 bg-emerald-50",
+			badge: "bg-emerald-700 text-white",
+		};
+	}
+
+	if (eventType === "caught_stealing" || eventType === "pickoff_caught_stealing") {
+		return {
+			container: "border-orange-300 bg-orange-50",
+			badge: "bg-orange-700 text-white",
 		};
 	}
 
@@ -73,7 +113,7 @@ const getSpecialEventStyles = (event: PlayEvent) => {
 
 const getSpecialEvents = (play: Play) => {
 	return play.playEvents.filter((event) => {
-		const eventType = event.details.eventType;
+		const eventType = getNormalizedEventType(event);
 		return typeof eventType === "string" && SPECIAL_EVENT_TYPES.has(eventType);
 	});
 };
