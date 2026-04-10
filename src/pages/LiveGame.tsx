@@ -187,7 +187,7 @@ const CurrentPitcherCard = () => {
     return (
         <div className="flex w-full max-w-md flex-col items-center gap-2 text-center lg:items-start lg:text-left">
             <p className={headerTextCss}>PITCHING</p>
-            <div className={clsx(infoBoxCss, "items-center gap-3") }>
+            <div className={clsx(infoBoxCss, "items-center gap-3")}>
                 <PlayerImage playerId={pitcher.id} size={75} />
                 <div className="flex flex-col">
                     <p className="text-lg">
@@ -338,12 +338,18 @@ const TeamScoreBox = ({ team, lineScore, isHome }: { team: TeamData, lineScore: 
     );
 }
 
-const TeamName = ({ team }: { team: TeamData }) => (
-    <p className="flex flex-wrap gap-x-2 gap-y-1 text-lg leading-tight">
-        {team.franchiseName}
-        <span className="font-bold">{team.teamName}</span>
-    </p>
-);
+const TeamName = ({ team }: { team: TeamData }) => {
+    const franchiseName = team.franchiseName;
+    const teamName = team.teamName;
+    const showFranchiseName = franchiseName !== teamName;
+
+    return (
+        <p className="flex flex-wrap gap-x-2 gap-y-1 text-lg leading-tight">
+            {showFranchiseName && <span className="text-stone-500">{franchiseName}</span>}
+            <span className="font-bold">{team.teamName}</span>
+        </p>
+    );
+}
 
 const TeamRecord = ({ team }: { team: TeamData }) => {
     const { wins, losses } = team.record;
