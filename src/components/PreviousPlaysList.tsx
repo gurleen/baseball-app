@@ -1,7 +1,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import PlaySummaryCard from "@/components/PlaySummaryCard";
-import { getHitDataFromPlay, getMatchupPitchesFromPlay, getPlayerFromGumbo, type GumboFeed, type Play, type PlayEvent } from "@/types/gumbo";
+import { getHitDataFromPlay, getMatchupPitchesFromPlay, getPlayerFromGumbo, type GumboFeed, type Play, type PlayEvent, type Runner } from "@/types/gumbo";
 import { getScorecardCodeFromPlay } from "@/util/scorecard";
 
 interface PreviousPlaysListProps {
@@ -18,7 +18,7 @@ type PreviousPlayListItem =
 	| {
 		kind: "special";
 		id: string;
-		event: PlayEvent;
+		event: SpecialEvent;
 	  }
 	| {
 		kind: "play";
@@ -26,22 +26,38 @@ type PreviousPlayListItem =
 		play: Play;
 	  };
 
-const SPECIAL_EVENT_TYPES = new Set([
-	"pitching_substitution",
-	"defensive_switch",
-	"defensive_substitution",
-	"mound_visit",
-	"stolen_base",
-	"caught_stealing",
-	"pickoff_caught_stealing",
-	"pickoff_1b",
-	"pickoff_2b",
-	"pickoff_3b",
-]);
+interface SpecialEvent {
+	index: number;
+	key: string;
+	eventType?: string;
+	eventLabel?: string;
+	description: string;
+	playerId?: number;
+}
 
-const getNormalizedEventType = (event: PlayEvent) => event.details.eventType?.trim().toLowerCase().replaceAll(" ", "_");
+const getNormalizedEventType = (eventType?: string) => eventType?.trim().toLowerCase().replaceAll(" ", "_");
+
+const matchesEventType = (eventType: string | undefined, expectedType: string) =>
+	eventType === expectedType || eventType?.startsWith(`${expectedType}_`) === true;
 
 const isPickoffAttemptEventType = (eventType?: string) => eventType === "pickoff_1b" || eventType === "pickoff_2b" || eventType === "pickoff_3b";
+
+const isSpecialEventType = (eventType?: string) => {
+	if (!eventType) {
+		return false;
+	}
+
+	return (
+		eventType === "pitching_substitution"
+		|| eventType === "defensive_switch"
+		|| eventType === "defensive_substitution"
+		|| eventType === "mound_visit"
+		|| matchesEventType(eventType, "stolen_base")
+		|| matchesEventType(eventType, "caught_stealing")
+		|| matchesEventType(eventType, "pickoff_caught_stealing")
+		|| isPickoffAttemptEventType(eventType)
+	);
+};
 
 const formatInningLabel = (play: Play) => {
 	const half = play.about.halfInning === "top" ? "Top" : "Bottom";
@@ -68,8 +84,8 @@ const getPlayStyles = (play: Play) => {
 	};
 };
 
-const getSpecialEventBadgeLabel = (event: PlayEvent) => {
-	const eventType = getNormalizedEventType(event);
+const getSpecialEventBadgeLabel = (event: SpecialEvent) => {
+	const eventType = getNormalizedEventType(event.eventType);
 
 	if (eventType === "mound_visit") {
 		return "Mound Visit";
@@ -83,15 +99,15 @@ const getSpecialEventBadgeLabel = (event: PlayEvent) => {
 		return "Defensive Change";
 	}
 
-	if (eventType === "stolen_base") {
+	if (matchesEventType(eventType, "stolen_base")) {
 		return "Stolen Base";
 	}
 
-	if (eventType === "caught_stealing") {
+	if (matchesEventType(eventType, "caught_stealing")) {
 		return "Caught Stealing";
 	}
 
-	if (eventType === "pickoff_caught_stealing") {
+	if (matchesEventType(eventType, "pickoff_caught_stealing")) {
 		return "Pickoff Caught Stealing";
 	}
 
@@ -99,11 +115,11 @@ const getSpecialEventBadgeLabel = (event: PlayEvent) => {
 		return "Pickoff Attempt";
 	}
 
-	return event.details.event ?? "Update";
+	return event.eventLabel ?? "Update";
 };
 
-const getSpecialEventStyles = (event: PlayEvent) => {
-	const eventType = getNormalizedEventType(event);
+const getSpecialEventStyles = (event: SpecialEvent) => {
+	const eventType = getNormalizedEventType(event.eventType);
 
 	if (eventType === "mound_visit") {
 		return {
@@ -119,14 +135,14 @@ const getSpecialEventStyles = (event: PlayEvent) => {
 		};
 	}
 
-	if (eventType === "stolen_base") {
+	if (matchesEventType(eventType, "stolen_base")) {
 		return {
 			container: "border-emerald-300 bg-emerald-50",
 			badge: "bg-emerald-700 text-white",
 		};
 	}
 
-	if (eventType === "caught_stealing" || eventType === "pickoff_caught_stealing") {
+	if (matchesEventType(eventType, "caught_stealing") || matchesEventType(eventType, "pickoff_caught_stealing")) {
 		return {
 			container: "border-orange-300 bg-orange-50",
 			badge: "bg-orange-700 text-white",
@@ -146,11 +162,65 @@ const getSpecialEventStyles = (event: PlayEvent) => {
 	};
 };
 
+const getRunnerEventDescription = (runner: Runner) => {
+	const runnerName = runner.details.runner.fullName;
+	const eventLabel = runner.details.event;
+
+	if (runnerName && eventLabel) {
+		return `${runnerName}: ${eventLabel}`;
+	}
+
+	return eventLabel ?? runnerName ?? "No description available.";
+};
+
 const getSpecialEvents = (play: Play) => {
-	return play.playEvents.filter((event) => {
-		const eventType = getNormalizedEventType(event);
-		return typeof eventType === "string" && SPECIAL_EVENT_TYPES.has(eventType);
+	const playEvents = play.playEvents.flatMap((event) => {
+		const eventType = getNormalizedEventType(event.details.eventType);
+
+		if (!isSpecialEventType(eventType)) {
+			return [];
+		}
+
+		return [{
+			index: event.index,
+			key: `play-${event.index}`,
+			eventType: event.details.eventType,
+			eventLabel: event.details.event,
+			description: event.details.description ?? event.details.event ?? "No description available.",
+			playerId: event.player?.id,
+		} satisfies SpecialEvent];
 	});
+
+	const runnerEvents = play.runners.flatMap((runner, runnerIndex) => {
+		const eventType = getNormalizedEventType(runner.details.eventType);
+
+		if (!isSpecialEventType(eventType)) {
+			return [];
+		}
+
+		return [{
+			index: runner.details.playIndex,
+			key: `runner-${runner.details.playIndex}-${runnerIndex}-${runner.details.runner.id}`,
+			eventType: runner.details.eventType,
+			eventLabel: runner.details.event,
+			description: getRunnerEventDescription(runner),
+			playerId: runner.details.runner.id,
+		} satisfies SpecialEvent];
+	});
+
+	const dedupedEvents = new Map<string, SpecialEvent>();
+
+	for (const event of [...playEvents, ...runnerEvents]) {
+		const eventType = getNormalizedEventType(event.eventType) ?? "unknown";
+		const playerId = event.playerId ?? "unknown";
+		const dedupeKey = `${event.index}:${eventType}:${playerId}`;
+
+		if (!dedupedEvents.has(dedupeKey)) {
+			dedupedEvents.set(dedupeKey, event);
+		}
+	}
+
+	return [...dedupedEvents.values()].sort((left, right) => left.index - right.index);
 };
 
 const getPreviousPlays = (gameData: GumboFeed): Play[] => {
@@ -185,7 +255,7 @@ const buildPreviousPlayList = (plays: Play[], currentPlay?: Play): PreviousPlayL
 			for (const event of currentPlaySpecialEvents) {
 				items.push({
 					kind: "special",
-					id: `special-current-${currentPlay.atBatIndex}-${event.index}`,
+					id: `special-current-${currentPlay.atBatIndex}-${event.key}`,
 					event,
 				});
 			}
@@ -213,7 +283,7 @@ const buildPreviousPlayList = (plays: Play[], currentPlay?: Play): PreviousPlayL
 		for (const event of getSpecialEvents(play).slice().reverse()) {
 			items.push({
 				kind: "special",
-				id: `special-${play.atBatIndex}-${event.index}`,
+				id: `special-${play.atBatIndex}-${event.key}`,
 				event,
 			});
 		}
@@ -262,10 +332,9 @@ export default function PreviousPlaysList({ gameData, height }: PreviousPlaysLis
 						}
 
 						if (item.kind === "special") {
-							const playerId = item.event.player?.id;
 							const styles = getSpecialEventStyles(item.event);
-							const description = item.event.details.description ?? "No description available.";
-							const isMoundVisit = item.event.details.eventType === "mound_visit";
+							const description = item.event.description;
+							const isMoundVisit = getNormalizedEventType(item.event.eventType) === "mound_visit";
 
 							if (isMoundVisit) {
 								return (
@@ -280,7 +349,7 @@ export default function PreviousPlaysList({ gameData, height }: PreviousPlaysLis
 									key={item.id}
 									badgeLabel={getSpecialEventBadgeLabel(item.event)}
 									description={description}
-									playerId={playerId}
+									playerId={item.event.playerId}
 									className={styles.container}
 									badgeClassName={styles.badge}
 									fallbackAvatarClassName="bg-white/70 ring-1 ring-black/5"
