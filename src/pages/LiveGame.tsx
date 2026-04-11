@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useGameData } from "@/hooks/useGameData";
-import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getHitDataFromPlay, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type MatchupPitch, type Linescore, type Play, type TeamData, type TeamLineScore, getPitcherSeasonStatsFromGumbo, getBatterSeasonStatsFromGumbo, BattingStats } from "@/types/gumbo";
+import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getHitDataFromPlay, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type MatchupPitch, type Linescore, type Play, type TeamData, type TeamLineScore, getPitcherSeasonStatsFromGumbo, getBatterSeasonStatsFromGumbo, BattingStats, type BoxscorePlayer, type BoxscoreTeamData } from "@/types/gumbo";
 import { TeamLogo } from "@/components/TeamLogo";
 import clsx from "clsx";
 import { BaseballDiamond, BaseballOuts } from "@/components/Baseball";
@@ -145,6 +145,71 @@ const getLiveGameTabId = (tab: LiveGameTab) => `live-game-${tab}-tab`;
 
 const getLiveGamePanelId = (tab: LiveGameTab) => `live-game-${tab}-panel`;
 
+const getPlayerPosition = (player: BoxscorePlayer) => {
+    return player.position?.abbreviation ?? player.allPositions?.at(-1)?.abbreviation ?? "-";
+};
+
+const getLineupSlot = (player: BoxscorePlayer) => {
+    if (!player.battingOrder) {
+        return null;
+    }
+
+    const battingOrder = Number.parseInt(player.battingOrder, 10);
+    if (Number.isNaN(battingOrder)) {
+        return null;
+    }
+
+    return Math.floor(battingOrder / 100);
+};
+
+const getCurrentOffenseBoxscore = (gameData: GumboFeed) => {
+    const offenseTeamId = gameData.liveData.linescore.offense?.team.id;
+
+    if (offenseTeamId === gameData.liveData.boxscore.teams.away.team.id) {
+        return gameData.liveData.boxscore.teams.away;
+    }
+
+    if (offenseTeamId === gameData.liveData.boxscore.teams.home.team.id) {
+        return gameData.liveData.boxscore.teams.home;
+    }
+
+    return null;
+};
+
+const getCurrentLineup = (team: BoxscoreTeamData) => {
+    const players = Object.values(team.players);
+    const activeLineupBySlot = new Map<number, BoxscorePlayer>();
+
+    for (const player of players) {
+        const lineupSlot = getLineupSlot(player);
+
+        if (!lineupSlot) {
+            continue;
+        }
+
+        const currentPlayer = activeLineupBySlot.get(lineupSlot);
+
+        if (!currentPlayer) {
+            activeLineupBySlot.set(lineupSlot, player);
+            continue;
+        }
+
+        const currentOrder = Number.parseInt(currentPlayer.battingOrder ?? "0", 10);
+        const nextOrder = Number.parseInt(player.battingOrder ?? "0", 10);
+
+        if (nextOrder >= currentOrder) {
+            activeLineupBySlot.set(lineupSlot, player);
+        }
+    }
+
+    return Array.from(activeLineupBySlot.entries())
+        .sort(([leftSlot], [rightSlot]) => leftSlot - rightSlot)
+        .map(([slot, player]) => ({
+            slot,
+            player,
+        }));
+};
+
 const LiveGameTabButton = ({
     tab,
     label,
@@ -196,6 +261,8 @@ const AtBatTabPanel = ({
     strikeZoneBottom: number;
     gameData: GumboFeed;
 }) => {
+    const offenseTeam = getCurrentOffenseBoxscore(gameData);
+
     return (
         <div
             role="tabpanel"
@@ -203,7 +270,7 @@ const AtBatTabPanel = ({
             aria-labelledby={getLiveGameTabId("at-bat")}
             className="border border-t-0 border-slate-300 bg-white/40 px-4 py-5"
         >
-            <div className="flex w-full flex-col items-center gap-6 xl:flex-row xl:flex-wrap xl:items-start xl:justify-center 2xl:flex-nowrap 2xl:justify-center">
+            <div className="flex w-full flex-col items-stretch gap-6 xl:flex-row xl:flex-wrap xl:items-start xl:justify-center 2xl:flex-nowrap 2xl:justify-center">
                 <StrikeZone strikeZoneTop={strikeZoneTop}
                     strikeZoneBottom={strikeZoneBottom}
                     pitches={pitches}
@@ -219,6 +286,7 @@ const AtBatTabPanel = ({
                     strikeZoneBottom={strikeZoneBottom}
                 />
                 <PreviousPlaysList gameData={gameData} height={strikeZoneHeight} />
+                {offenseTeam && <CurrentLineupPanel team={offenseTeam} currentBatterId={currentPlay.matchup.batter.id} height={strikeZoneHeight} />}
             </div>
         </div>
     );
@@ -270,11 +338,11 @@ const PitchSequencePanel = ({ pitches, height, currentPlay, batterId, strikeZone
     const hitData = getHitDataFromPlay(currentPlay);
 
     return (
-        <div className="flex w-full max-w-lg flex-col overflow-hidden border border-slate-300 bg-white/80" style={{ height }}>
+        <div className="flex w-full min-w-0 max-w-2xl flex-col overflow-hidden border border-slate-300 bg-white/80 xl:min-w-136 xl:flex-[1.1]" style={{ height }}>
             <div className="border-b border-slate-300 px-4 py-3">
                 <p className="text-sm font-semibold tracking-wide text-slate-700">Pitch Sequence</p>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-auto">
                 <PitchSequenceTable
                     pitches={pitches}
                     stickyHeader
@@ -300,6 +368,62 @@ const PitchSequencePanel = ({ pitches, height, currentPlay, batterId, strikeZone
         </div>
     );
 }
+
+const getBatterShortName = (id: number, gameData: GumboFeed) => {
+    const player = getPlayerFromGumbo(gameData, id);
+    
+    if (!player) {
+        return "";
+    }
+
+    return player.boxscoreName;
+}
+
+const CurrentLineupPanel = ({ team, currentBatterId, height }: { team: BoxscoreTeamData; currentBatterId: number; height: number }) => {
+    const gameData = useLiveGameContext();
+    const lineup = getCurrentLineup(team);
+
+    return (
+        <div className="flex w-full max-w-xs flex-col overflow-hidden border border-slate-300 bg-white/80 xl:w-56 xl:flex-none" style={{ height }}>
+            <div className="border-b border-slate-300 px-4 py-3">
+                <p className="text-sm font-semibold tracking-wide text-slate-700">{team.team.name}</p>
+                <p className="text-xs font-semibold tracking-wide text-slate-500">LINEUP</p>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+                <table className="w-full table-fixed text-left text-sm">
+                    <thead className="sticky top-0 z-10 bg-slate-100 text-slate-600">
+                        <tr>
+                            <th className="w-10 px-3 py-2 font-semibold text-center">#</th>
+                            <th className="px-3 py-2 font-semibold">Batter</th>
+                            <th className="w-12 px-3 py-2 font-semibold text-center">Pos</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {lineup.map(({ slot, player }) => {
+                            const isCurrentBatter = player.person.id === currentBatterId;
+
+                            return (
+                                <tr
+                                    key={`${slot}-${player.person.id}`}
+                                    className={clsx(
+                                        "border-t border-slate-200 align-top",
+                                        isCurrentBatter ? "bg-amber-100/80" : "odd:bg-white even:bg-slate-50",
+                                    )}
+                                >
+                                    <td className="px-3 py-2 text-center font-semibold text-slate-700">{slot}</td>
+                                    <td className="px-3 py-2 text-slate-700">
+                                        <div className="truncate font-medium">{getBatterShortName(player.person.id, gameData)}</div>
+                                    </td>
+                                    <td className="px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">{getPlayerPosition(player)}</td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
 
 const MatchupRow = () => {
     const outerClasses = clsx("flex", "w-full", "max-w-md", "flex-col", "items-stretch", "gap-6", "2xl:w-[22rem]", "2xl:flex-none");
