@@ -91,6 +91,7 @@ export default function PitchSequenceTable({
 	resultRow,
 	className,
 }: PitchSequenceTableProps) {
+	const orderedPitches = [...pitches].reverse();
 	const tableClassName = compact ? "w-full table-fixed text-left text-xs text-slate-600" : "w-full table-fixed text-left text-sm";
 	const headerClassName = clsx(stickyHeader && "sticky top-0 z-10", compact ? "bg-slate-100 text-slate-500" : "bg-slate-100 text-slate-600");
 	const headerCellClassName = compact ? "px-2 py-2 font-semibold" : "px-3 py-2 font-semibold";
@@ -118,7 +119,8 @@ export default function PitchSequenceTable({
 				</tr>
 			</thead>
 			<tbody>
-				{pitches.map((pitch, index) => (
+				{resultRow}
+				{orderedPitches.map((pitch, index) => (
 					<tr
 						key={`${index}-${pitch.pitchData.startSpeed ?? "pitch"}`}
 						className="border-t border-slate-200 align-top odd:bg-white even:bg-slate-50"
@@ -126,7 +128,7 @@ export default function PitchSequenceTable({
 						<td className={numberCellClassName}>
 							<div className={clsx("flex items-center", compact ? "gap-1.5" : "gap-2")}>
 								<span className={clsx(dotClassName, getPitchSequenceColor(pitch))}></span>
-								<span>{index + 1}</span>
+								<span>{pitches.length - index}</span>
 							</div>
 						</td>
 						<td className={bodyCellClassName}>
@@ -141,7 +143,6 @@ export default function PitchSequenceTable({
 						<td className={bodyCellClassName}>{formatPitchBreak(pitch.pitchData.breaks?.breakVertical)}</td>
 					</tr>
 				))}
-				{resultRow}
 			</tbody>
 		</table>
 	);
