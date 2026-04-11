@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { NotFoundRedirect } from "./NotFound";
 import { useGameData } from "@/hooks/useGameData";
 import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getHitDataFromPlay, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type MatchupPitch, type Linescore, type Play, type TeamData, type TeamLineScore } from "@/types/gumbo";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -37,24 +36,22 @@ function LiveGameSummary() {
 
     return (
         <div className="flex flex-col items-center gap-8">
-            <div className="flex w-full flex-col items-center gap-6 2xl:flex-row 2xl:items-center 2xl:justify-center 2xl:gap-10">
-                <div className="flex w-full flex-col items-center gap-6 2xl:w-auto 2xl:min-w-0 2xl:flex-row 2xl:items-center 2xl:justify-center">
-                    <div className="flex w-full max-w-4xl flex-col gap-3">
+            <div className="flex w-full flex-col items-center gap-6 2xl:flex-row 2xl:items-start 2xl:justify-center 2xl:gap-10">
+                <div className="flex w-full flex-col items-center gap-6 2xl:w-136 2xl:flex-none 2xl:items-center 2xl:justify-center">
+                    <div className="flex w-full max-w-2xl flex-col gap-3 2xl:max-w-136">
                         <TeamScoreBox team={gameData.gameData.teams.away} lineScore={gameData.liveData.linescore.teams.away} />
                         <TeamScoreBox team={gameData.gameData.teams.home} lineScore={gameData.liveData.linescore.teams.home} />
                     </div>
-
-                    <div className="flex justify-center">
-                        <GameStatusBox linescore={gameData.liveData.linescore} />
-                    </div>
                 </div>
 
-                <div className="flex w-full justify-center overflow-x-auto 2xl:w-auto 2xl:flex-none">
+                <div className="flex flex-col h-full justify-between gap-12">
                     <LinescoreTable linescore={gameData.liveData.linescore} awayTeam={gameData.gameData.teams.away} homeTeam={gameData.gameData.teams.home} />
+                    <GameStatusBox linescore={gameData.liveData.linescore} />
                 </div>
+
+                {currentPlay && <MatchupRow />}
             </div>
 
-            {currentPlay && <MatchupRow />}
             {currentPlay && <CurrentMatchupStrikeZone />}
         </div>
     );
@@ -161,7 +158,7 @@ const PitchSequencePanel = ({ pitches, height, currentPlay, batterId, strikeZone
 }
 
 const MatchupRow = () => {
-    const outerClasses = clsx("flex", "w-full", "flex-col", "items-center", "gap-6", "lg:flex-row", "lg:flex-wrap", "lg:justify-center", "lg:gap-16");
+    const outerClasses = clsx("flex", "w-full", "max-w-md", "flex-col", "items-stretch", "gap-6", "2xl:w-[22rem]", "2xl:flex-none");
 
     return (
         <div className={outerClasses}>
@@ -241,14 +238,17 @@ const CurrentBatterCard = () => {
 const LinescoreTable = ({ linescore, awayTeam, homeTeam }: { linescore: Linescore, awayTeam: TeamData, homeTeam: TeamData }) => {
     const currentInning = linescore.currentInning || 0;
     const isTopInning = linescore.inningHalf === "Top";
+    const totalInnings = Math.max(9, currentInning, ...linescore.innings.map((inning) => inning.num));
+    const inningNumbers = Array.from({ length: totalInnings }, (_, index) => index + 1);
+    const inningsByNumber = new Map(linescore.innings.map((inning) => [inning.num, inning]));
 
     return (
         <table className="table-fixed text-lg text-center min-w-max">
             <thead>
                 <tr>
                     <th></th>
-                    {linescore.innings.map(inning => (
-                        <th className="px-2 text-stone-600" key={inning.num}>{inning.num}</th>
+                    {inningNumbers.map((inningNum) => (
+                        <th className="px-2 text-stone-600" key={inningNum}>{inningNum}</th>
                     ))}
                     <th className="ps-10 pe-2">R</th>
                     <th className="px-2">H</th>
@@ -258,8 +258,15 @@ const LinescoreTable = ({ linescore, awayTeam, homeTeam }: { linescore: Linescor
             <tbody>
                 <tr>
                     <td className="font-bold pe-5">{awayTeam.abbreviation}</td>
-                    {linescore.innings.map(i => (
-                        <InningRunsCell key={i.num} runs={i.away.runs || 0} inningNum={i.num} currentInning={currentInning} isTopHalf={isTopInning} isHome={false} />
+                    {inningNumbers.map((inningNum) => (
+                        <InningRunsCell
+                            key={inningNum}
+                            runs={inningsByNumber.get(inningNum)?.away.runs}
+                            inningNum={inningNum}
+                            currentInning={currentInning}
+                            isTopHalf={isTopInning}
+                            isHome={false}
+                        />
                     ))}
                     <td className="ps-10 pe-2 font-bold">{linescore.teams.away.runs}</td>
                     <td className="px-2 font-bold">{linescore.teams.away.hits}</td>
@@ -267,8 +274,15 @@ const LinescoreTable = ({ linescore, awayTeam, homeTeam }: { linescore: Linescor
                 </tr>
                 <tr>
                     <td className="font-bold pe-5">{homeTeam.abbreviation}</td>
-                    {linescore.innings.map(i => (
-                        <InningRunsCell key={i.num} runs={i.home.runs || 0} inningNum={i.num} currentInning={currentInning} isTopHalf={isTopInning} isHome={true} />
+                    {inningNumbers.map((inningNum) => (
+                        <InningRunsCell
+                            key={inningNum}
+                            runs={inningsByNumber.get(inningNum)?.home.runs}
+                            inningNum={inningNum}
+                            currentInning={currentInning}
+                            isTopHalf={isTopInning}
+                            isHome={true}
+                        />
                     ))}
                     <td className="ps-10 pe-2 font-bold">{linescore.teams.home.runs}</td>
                     <td className="px-2 font-bold">{linescore.teams.home.hits}</td>
@@ -279,17 +293,18 @@ const LinescoreTable = ({ linescore, awayTeam, homeTeam }: { linescore: Linescor
     );
 }
 
-const InningRunsCell = ({ runs, inningNum, currentInning, isTopHalf, isHome }: { runs: number, inningNum: number, currentInning: number, isTopHalf: boolean, isHome: boolean }) => {
+const InningRunsCell = ({ runs, inningNum, currentInning, isTopHalf, isHome }: { runs?: number, inningNum: number, currentInning: number, isTopHalf: boolean, isHome: boolean }) => {
     const isCurrentHalf = isHome ? !isTopHalf : isTopHalf;
     const isCurrent = inningNum == currentInning && isCurrentHalf;
+    const isFutureInning = typeof runs !== "number";
 
     const noRunsYet = runs === 0 && isCurrent;
-    const shouldHide = (isHome && inningNum == currentInning && isTopHalf) || noRunsYet;
+    const shouldHide = isFutureInning || (isHome && inningNum == currentInning && isTopHalf) || noRunsYet;
 
     const classes = clsx("px-2", isCurrent && "bg-yellow-300/50", isCurrent && (isHome ? "rounded-tr-lg" : "rounded-tl-lg"), shouldHide && "text-transparent");
 
     return (
-        <td className={classes}>{runs}</td>
+        <td className={classes}>{runs ?? 0}</td>
     );
 }
 
@@ -300,10 +315,12 @@ const GameStatusBox = ({ linescore }: { linescore: Linescore }) => {
     const count = balls != null && strikes != null ? `${balls}-${strikes}` : null;
 
     return (
-        <div className="flex w-full max-w-sm flex-col items-center justify-center gap-2 text-center">
+        <div className="flex w-full max-w-sm items-center justify-center gap-4 text-center">
             <p>{linescore.inningState} {linescore.currentInningOrdinal}</p>
-            <GameBasesState linescore={linescore} />
-            <BaseballOuts outs={linescore.outs ?? 0} />
+            <div className="flex flex-col gap-2 items-center">
+                <GameBasesState linescore={linescore} />
+                <BaseballOuts outs={linescore.outs ?? 0} />
+            </div>
             {count && (
                 <p className="text-xl font-bold text-neutral-600">{count}</p>
             )}
@@ -323,7 +340,7 @@ const GameBasesState = ({ linescore }: { linescore: Linescore }) => {
 
 const TeamScoreBox = ({ team, lineScore, isHome }: { team: TeamData, lineScore: TeamLineScore, isHome?: boolean }) => {
     const leftHalfClasses = clsx("flex", "items-center", "justify-center", "gap-3", "w-full", isHome && "flex-row-reverse", isHome && "text-right", "sm:justify-start");
-    const outerClasses = clsx("flex", "w-full", "max-w-4xl", "flex-col", "items-center", "gap-3", "rounded-lg", "border", "border-slate-200", "bg-white/60", "px-4", "py-3", "sm:flex-row", "sm:justify-between", isHome && "sm:flex-row-reverse", isHome && "sm:text-right");
+    const outerClasses = clsx("flex", "w-full", "max-w-2xl", "flex-col", "items-center", "gap-3", "rounded-lg", "border", "border-slate-200", "bg-white/60", "px-4", "py-3", "sm:flex-row", "sm:justify-between", "2xl:max-w-[34rem]", isHome && "sm:flex-row-reverse", isHome && "sm:text-right");
 
     return (
         <div className={outerClasses}>
