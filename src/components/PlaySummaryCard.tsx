@@ -102,16 +102,19 @@ export default function PlaySummaryCard({
 }
 
 const HitDataTable = ({ hitData }: { hitData: HitData }) => {
-    const launchSpeed = (hitData?.launchSpeed ?? 0).toFixed(1);
+    const launchSpeedValue = hitData.launchSpeed ?? 0;
+    const launchSpeed = launchSpeedValue.toFixed(1);
     const launchAngle = (hitData?.launchAngle ?? 0).toFixed(1);
     const distance = Math.round(hitData?.totalDistance ?? 0);
+
+    const launchSpeedCss = clsx("px-2", "underline", launchSpeedValue >= 95 ? "text-red-600" : "text-slate-700");
 
     return (
         <table className="mt-2 text-center text-sm text-slate-500">
             <tbody>
                 <tr>
                     <td className="px-2 font-medium bg-slate-900 text-white">EV</td>
-                    <td className="px-2 underline">{launchSpeed} mph</td>
+                    <td className={launchSpeedCss}>{launchSpeed} mph</td>
                     <td className="px-2 font-medium bg-slate-900 text-white">LA</td>
                     <td className="px-2 underline">{launchAngle} deg</td>
                     <td className="px-2 font-medium bg-slate-900 text-white">DIST</td>

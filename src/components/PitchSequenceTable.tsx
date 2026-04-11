@@ -51,7 +51,7 @@ const formatPitchSpeed = (speed?: number, compact?: boolean) => {
 		return "-";
 	}
 
-	return `${speed.toFixed(1)}${compact ? "" : " mph"}`;
+	return `${speed.toFixed(1)}`;
 };
 
 const formatPitchSpinRate = (spinRate?: number, compact?: boolean) => {
@@ -59,7 +59,7 @@ const formatPitchSpinRate = (spinRate?: number, compact?: boolean) => {
 		return "-";
 	}
 
-	return `${spinRate.toFixed(0)}${compact ? "" : " rpm"}`;
+	return spinRate.toFixed(0);
 };
 
 const formatPitchResult = (result?: string) => {
@@ -67,7 +67,7 @@ const formatPitchResult = (result?: string) => {
 		return "-";
 	}
 
-	return result;
+	return result.replace(" Strike", "");
 };
 
 const formatPitchResultAndCount = (pitch: MatchupPitch) => {
