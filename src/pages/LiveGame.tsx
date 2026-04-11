@@ -224,7 +224,7 @@ const CurrentBatterCard = () => {
                 <PlayerImage playerId={batter.id} size={75} />
                 <div className="flex flex-col">
                     <p className="text-lg">
-                        <span>{batter.firstName}</span>
+                        <span>{batter.useName}</span>
                         <span className="font-bold"> {batter.lastName}</span>
                         <span className="ms-2 text-stone-500 text-sm">
                             <span className={clsx(batter.batSide.code == "R" && "hidden")}>({batter.batSide.code}) </span>
