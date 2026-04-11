@@ -373,11 +373,11 @@ const TeamName = ({ team }: { team: TeamData }) => {
 }
 
 const TeamRecord = ({ team }: { team: TeamData }) => {
-    const { wins, losses } = team.record;
+    const { wins, losses, winningPercentage } = team.record;
 
     return (
         <p className="text-sm text-neutral-600">
-            {wins}-{losses}
+            {wins}-{losses} ({winningPercentage})
         </p>
     )
 }
