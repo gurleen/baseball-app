@@ -393,13 +393,13 @@ const TeamScoreBox = ({ team, lineScore, isHome }: { team: TeamData, lineScore: 
 
 const TeamName = ({ team }: { team: TeamData }) => {
     const franchiseName = team.franchiseName;
-    const teamName = team.teamName;
+    const teamName = team.clubName;
     const showFranchiseName = franchiseName !== teamName;
 
     return (
         <p className="flex flex-wrap gap-x-2 gap-y-1 text-lg leading-tight">
             {showFranchiseName && <span className="text-stone-500">{franchiseName}</span>}
-            <span className="font-bold">{team.teamName}</span>
+            <span className="font-bold">{teamName}</span>
         </p>
     );
 }
