@@ -74,8 +74,17 @@ const normalizeEventType = (value?: string) => value?.trim().toLowerCase().repla
 
 const normalizeText = (value?: string) => value?.trim().toLowerCase() ?? "";
 
-const getBattedBallOutPrefix = (play: Play, eventType: string): "F" | "L" | null => {
+const getBattedBallOutPrefix = (play: Play, eventType: string): "F" | "L" | "P" | null => {
 	const resultText = normalizeText(play.result.description ?? play.result.event);
+
+	if (
+		eventType === "popup"
+		|| eventType === "pop_out"
+		|| resultText.includes("pops out")
+		|| resultText.includes("popup")
+	) {
+		return "P";
+	}
 
 	if (
 		eventType === "lineout"
@@ -91,8 +100,6 @@ const getBattedBallOutPrefix = (play: Play, eventType: string): "F" | "L" | null
 		AIR_OUT_EVENT_TYPES.has(eventType)
 		|| resultText.includes("flies out")
 		|| resultText.includes("fly out")
-		|| resultText.includes("pops out")
-		|| resultText.includes("popup")
 		|| resultText.includes("foul out")
 	) {
 		return "F";
