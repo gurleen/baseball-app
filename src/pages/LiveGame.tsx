@@ -5,6 +5,8 @@ import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getHitDataFromPlay, 
 import { TeamLogo } from "@/components/TeamLogo";
 import clsx from "clsx";
 import { BaseballDiamond, BaseballOuts } from "@/components/Baseball";
+import OffenseTable from "../components/OffenseTable";
+import PitchingTable from "../components/PitchingTable";
 import { PlayerImage } from "@/components/PlayerImg";
 import PitchSequenceTable from "@/components/PitchSequenceTable";
 import PlaySummaryCard from "@/components/PlaySummaryCard";
@@ -15,6 +17,7 @@ import { getScorecardCodeFromPlay } from "@/util/scorecard";
 const GameDataContext = createContext<GumboFeed | null>(null);
 const DESKTOP_STRIKE_ZONE_WIDTH = 350;
 const MOBILE_STRIKE_ZONE_WIDTH = 280;
+type LiveGameTab = "at-bat" | "offense" | "pitching";
 
 const hasCompletedPlayResult = (play: Play) => {
     return play.about.isComplete && (Boolean(play.result.event) || Boolean(play.result.eventType) || Boolean(play.result.description));
@@ -60,6 +63,7 @@ function LiveGameSummary() {
 const CurrentMatchupStrikeZone = () => {
     const gameData = useLiveGameContext();
     const currentPlay = gameData.liveData.plays.currentPlay;
+    const [activeTab, setActiveTab] = useState<LiveGameTab>("at-bat");
     const [strikeZoneWidth, setStrikeZoneWidth] = useState(() => {
         if (typeof window === "undefined") {
             return DESKTOP_STRIKE_ZONE_WIDTH;
@@ -98,25 +102,165 @@ const CurrentMatchupStrikeZone = () => {
     });
 
     return (
-        <div className="mt-6 flex w-full flex-col items-center gap-6 xl:flex-row xl:flex-wrap xl:items-start xl:justify-center 2xl:flex-nowrap 2xl:justify-center">
-            <StrikeZone strikeZoneTop={batter.strikeZoneTop}
-                strikeZoneBottom={batter.strikeZoneBottom}
-                pitches={pitches}
-                width={strikeZoneWidth}
-                className="border-2 border-slate-800" />
-
-            <PitchSequencePanel
-                pitches={pitches}
-                height={strikeZoneHeight}
-                currentPlay={currentPlay}
-                batterId={batter.id}
-                strikeZoneTop={batter.strikeZoneTop}
-                strikeZoneBottom={batter.strikeZoneBottom}
-            />
-            <PreviousPlaysList gameData={gameData} height={strikeZoneHeight} />
-        </div>
+        <section className="mt-6 flex w-full self-stretch flex-col">
+            <div role="tablist" aria-label="Live game detail tabs" className="flex items-end gap-2 border-b border-slate-300">
+                <LiveGameTabButton
+                    tab="at-bat"
+                    label="AT BAT"
+                    activeTab={activeTab}
+                    onSelect={setActiveTab}
+                />
+                <LiveGameTabButton
+                    tab="offense"
+                    label="OFFENSE"
+                    activeTab={activeTab}
+                    onSelect={setActiveTab}
+                />
+                <LiveGameTabButton
+                    tab="pitching"
+                    label="PITCHING"
+                    activeTab={activeTab}
+                    onSelect={setActiveTab}
+                />
+            </div>
+            {activeTab === "at-bat" && (
+                <AtBatTabPanel
+                    pitches={pitches}
+                    strikeZoneHeight={strikeZoneHeight}
+                    strikeZoneWidth={strikeZoneWidth}
+                    currentPlay={currentPlay}
+                    batterId={batter.id}
+                    strikeZoneTop={batter.strikeZoneTop}
+                    strikeZoneBottom={batter.strikeZoneBottom}
+                    gameData={gameData}
+                />
+            )}
+            {activeTab === "offense" && <OffenseTabPanel gameData={gameData} />}
+            {activeTab === "pitching" && <PitchingTabPanel gameData={gameData} />}
+        </section>
     );
 }
+
+const getLiveGameTabId = (tab: LiveGameTab) => `live-game-${tab}-tab`;
+
+const getLiveGamePanelId = (tab: LiveGameTab) => `live-game-${tab}-panel`;
+
+const LiveGameTabButton = ({
+    tab,
+    label,
+    activeTab,
+    onSelect,
+}: {
+    tab: LiveGameTab;
+    label: string;
+    activeTab: LiveGameTab;
+    onSelect: (tab: LiveGameTab) => void;
+}) => {
+    const isActive = activeTab === tab;
+
+    return (
+        <button
+            type="button"
+            role="tab"
+            id={getLiveGameTabId(tab)}
+            aria-selected={isActive}
+            aria-controls={getLiveGamePanelId(tab)}
+            tabIndex={isActive ? 0 : -1}
+            onClick={() => onSelect(tab)}
+            className={clsx(
+                "rounded-t-md border border-b-0 px-4 py-2 text-sm font-semibold tracking-wide hover:cursor-pointer",
+                isActive ? "border-slate-700 bg-slate-900 text-white" : "border-slate-300 bg-white/70 text-slate-600"
+            )}
+        >
+            {label}
+        </button>
+    );
+};
+
+const AtBatTabPanel = ({
+    pitches,
+    strikeZoneHeight,
+    strikeZoneWidth,
+    currentPlay,
+    batterId,
+    strikeZoneTop,
+    strikeZoneBottom,
+    gameData,
+}: {
+    pitches: MatchupPitch[];
+    strikeZoneHeight: number;
+    strikeZoneWidth: number;
+    currentPlay: Play;
+    batterId: number;
+    strikeZoneTop: number;
+    strikeZoneBottom: number;
+    gameData: GumboFeed;
+}) => {
+    return (
+        <div
+            role="tabpanel"
+            id={getLiveGamePanelId("at-bat")}
+            aria-labelledby={getLiveGameTabId("at-bat")}
+            className="border border-t-0 border-slate-300 bg-white/40 px-4 py-5"
+        >
+            <div className="flex w-full flex-col items-center gap-6 xl:flex-row xl:flex-wrap xl:items-start xl:justify-center 2xl:flex-nowrap 2xl:justify-center">
+                <StrikeZone strikeZoneTop={strikeZoneTop}
+                    strikeZoneBottom={strikeZoneBottom}
+                    pitches={pitches}
+                    width={strikeZoneWidth}
+                    className="border-2 border-slate-800" />
+
+                <PitchSequencePanel
+                    pitches={pitches}
+                    height={strikeZoneHeight}
+                    currentPlay={currentPlay}
+                    batterId={batterId}
+                    strikeZoneTop={strikeZoneTop}
+                    strikeZoneBottom={strikeZoneBottom}
+                />
+                <PreviousPlaysList gameData={gameData} height={strikeZoneHeight} />
+            </div>
+        </div>
+    );
+};
+
+const OffenseTabPanel = ({ gameData }: { gameData: GumboFeed }) => {
+    const awayBoxScore = gameData.liveData.boxscore.teams.away;
+    const homeBoxScore = gameData.liveData.boxscore.teams.home;
+
+    return (
+        <div
+            role="tabpanel"
+            id={getLiveGamePanelId("offense")}
+            aria-labelledby={getLiveGameTabId("offense")}
+            className="border border-t-0 border-slate-300 bg-white/40 px-4 py-5"
+        >
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                <OffenseTable team={awayBoxScore} />
+                <OffenseTable team={homeBoxScore} />
+            </div>
+        </div>
+    );
+};
+
+const PitchingTabPanel = ({ gameData }: { gameData: GumboFeed }) => {
+    const awayBoxScore = gameData.liveData.boxscore.teams.away;
+    const homeBoxScore = gameData.liveData.boxscore.teams.home;
+
+    return (
+        <div
+            role="tabpanel"
+            id={getLiveGamePanelId("pitching")}
+            aria-labelledby={getLiveGameTabId("pitching")}
+            className="border border-t-0 border-slate-300 bg-white/40 px-4 py-5"
+        >
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                <PitchingTable team={awayBoxScore} />
+                <PitchingTable team={homeBoxScore} />
+            </div>
+        </div>
+    );
+};
 
 const PitchSequencePanel = ({ pitches, height, currentPlay, batterId, strikeZoneTop, strikeZoneBottom }: { pitches: MatchupPitch[]; height: number; currentPlay: Play; batterId: number; strikeZoneTop: number; strikeZoneBottom: number }) => {
     const showCompletedResult = hasCompletedPlayResult(currentPlay);
@@ -213,8 +357,6 @@ const CurrentPitcherCard = () => {
 }
 
 const getBatterSlash = (stats: BattingStats | null) => {
-    console.log(stats);
-
     if (!stats) {
         return "";
     }
