@@ -254,7 +254,7 @@ const LiveGameTabButton = ({
             tabIndex={isActive ? 0 : -1}
             onClick={() => onSelect(tab)}
             className={clsx(
-                "rounded-t-md border border-b-0 px-4 py-2 text-sm font-semibold tracking-wide hover:cursor-pointer",
+                "rounded-t-md border border-b-0 px-4 py-2 text-sm font-semibold tracking-wide hover:cursor-pointer underline decoration-transparent hover:decoration-current transition duration-200",
                 isActive ? "border-slate-700 bg-slate-900 text-white" : "border-slate-300 bg-white/70 text-slate-600"
             )}
         >
