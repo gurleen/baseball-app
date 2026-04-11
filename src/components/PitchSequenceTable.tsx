@@ -54,6 +54,14 @@ const formatPitchSpeed = (speed?: number, compact?: boolean) => {
 	return `${speed.toFixed(1)}${compact ? "" : " mph"}`;
 };
 
+const formatPitchSpinRate = (spinRate?: number, compact?: boolean) => {
+	if (typeof spinRate !== "number" || !Number.isFinite(spinRate)) {
+		return "-";
+	}
+
+	return `${spinRate.toFixed(0)}${compact ? "" : " rpm"}`;
+};
+
 const formatPitchResult = (result?: string) => {
 	if (!result) {
 		return "-";
@@ -89,11 +97,12 @@ export default function PitchSequenceTable({
 	const numberCellClassName = compact ? "px-2 py-2" : "px-4 py-2 font-semibold text-slate-700";
 	const bodyCellClassName = compact ? "px-2 py-2" : "px-3 py-2 text-slate-700";
 	const dotClassName = compact ? "inline-block h-2.5 w-2.5 rounded-full" : "inline-block h-3 w-3 rounded-full";
-	const firstColumnWidth = compact ? "w-12" : "w-14";
-	const veloWidth = compact ? "w-16" : "w-20";
-	const typeWidth = compact ? "w-16" : "w-20";
-	const resultWidth = compact ? "w-24" : "w-32";
-	const breakWidth = compact ? "w-18" : "w-20";
+	const firstColumnWidth = compact ? "w-10" : "w-12";
+	const veloWidth = compact ? "w-14" : "w-16";
+	const spinWidth = compact ? "w-16" : "w-20";
+	const typeWidth = compact ? "w-14" : "w-16";
+	const resultWidth = compact ? "w-20" : "w-24";
+	const breakWidth = compact ? "w-14" : "w-16";
 
 	return (
 		<table className={clsx(tableClassName, className)}>
@@ -101,6 +110,7 @@ export default function PitchSequenceTable({
 				<tr>
 					<th className={clsx(firstColumnWidth, compact ? "px-2 py-2 font-semibold" : "px-4 py-2 font-semibold")}>#</th>
 					<th className={clsx(veloWidth, headerCellClassName)}>Velo</th>
+					<th className={clsx(spinWidth, headerCellClassName)}>Spin</th>
 					<th className={clsx(typeWidth, headerCellClassName)}>Type</th>
 					<th className={clsx(resultWidth, headerCellClassName)}>Result</th>
 					<th className={clsx(breakWidth, headerCellClassName)}>HB</th>
@@ -121,6 +131,9 @@ export default function PitchSequenceTable({
 						</td>
 						<td className={bodyCellClassName}>
 							{formatPitchSpeed(pitch.pitchData.startSpeed, compact)}
+						</td>
+						<td className={bodyCellClassName}>
+							{formatPitchSpinRate(pitch.pitchData.breaks?.spinRate, compact)}
 						</td>
 						<td className={bodyCellClassName}>{formatPitchType(pitch.pitchType)}</td>
 						<td className={clsx(bodyCellClassName, "whitespace-normal")}>{formatPitchResultAndCount(pitch)}</td>
