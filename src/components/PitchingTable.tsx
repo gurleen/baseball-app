@@ -1,7 +1,8 @@
-import type { BoxscorePlayer, BoxscoreTeamData, PitchingStats } from "@/types/gumbo";
+import { getPlayerFromGumbo, type BoxscorePlayer, type BoxscoreTeamData, type GumboFeed, type PitchingStats } from "@/types/gumbo";
 
 interface PitchingTableProps {
 	team: BoxscoreTeamData;
+	gameData: GumboFeed;
 }
 
 const formatNumberStat = (value?: number) => {
@@ -48,7 +49,50 @@ const getPitchingTotals = (team: BoxscoreTeamData): PitchingStats => {
 	return team.teamStats.pitching;
 };
 
-export default function PitchingTable({ team }: PitchingTableProps) {
+const isProbableStarter = (player: BoxscorePlayer, team: BoxscoreTeamData, gameData: GumboFeed) => {
+	const probablePitchers = gameData.gameData.probablePitchers;
+
+	if (!probablePitchers) {
+		return false;
+	}
+
+	const probableStarterId = team.team.id === gameData.gameData.teams.away.id
+		? probablePitchers.away.id
+		: probablePitchers.home.id;
+
+	return probableStarterId === player.person.id;
+};
+
+const getPitcherRole = (player: BoxscorePlayer, team: BoxscoreTeamData, gameData: GumboFeed) => {
+	const seasonStats = player.seasonStats.pitching;
+	const gamesStarted = seasonStats.gamesStarted ?? 0;
+	const gamesPitched = seasonStats.gamesPitched ?? seasonStats.gamesPlayed ?? 0;
+	const reliefAppearances = Math.max(gamesPitched - gamesStarted, 0);
+
+	if (team.pitchers[0] === player.person.id || isProbableStarter(player, team, gameData)) {
+		return "SP";
+	}
+
+	if (gamesStarted > 0 && gamesStarted >= reliefAppearances) {
+		return "SP";
+	}
+
+	if (reliefAppearances > 0 || team.bullpen.includes(player.person.id) || team.pitchers.includes(player.person.id)) {
+		return "RP";
+	}
+
+	return player.position?.abbreviation ?? player.allPositions?.at(-1)?.abbreviation ?? "P";
+};
+
+const getPitcherMetadata = (player: BoxscorePlayer, team: BoxscoreTeamData, gameData: GumboFeed) => {
+	const playerProfile = getPlayerFromGumbo(gameData, player.person.id);
+	const handedness = playerProfile?.pitchHand.code ? playerProfile.pitchHand.code : null;
+	const role = getPitcherRole(player, team, gameData);
+
+	return [handedness, role].filter(Boolean).join(" ");
+};
+
+export default function PitchingTable({ team, gameData }: PitchingTableProps) {
 	const activePitchers = getOrderedPlayers(team.pitchers, team).filter(hasEnteredGameAsPitcher);
 	const bullpenPitchers = getOrderedPlayers(team.bullpen, team);
 	const totals = getPitchingTotals(team);
@@ -78,7 +122,10 @@ export default function PitchingTable({ team }: PitchingTableProps) {
 						{activePitchers.map((player) => (
 							<tr key={player.person.id} className="border-t border-slate-200 align-top odd:bg-white even:bg-slate-50">
 								<td className="px-3 py-2 text-slate-700">
-									<span className="font-medium">{player.person.fullName}</span>
+									<div className="flex items-baseline justify-between gap-3">
+										<span className="font-medium">{player.person.fullName}</span>
+										<span className="shrink-0 text-xs uppercase tracking-wide text-slate-500">{getPitcherMetadata(player, team, gameData)}</span>
+									</div>
 								</td>
 								<td className="px-3 py-2 text-center text-slate-700">{formatDisplayStat(player.stats.pitching.inningsPitched)}</td>
 								<td className="px-3 py-2 text-center text-slate-700">{formatPitchStrikeStat(player.stats.pitching.pitchesThrown, player.stats.pitching.strikes)}</td>
@@ -124,7 +171,10 @@ export default function PitchingTable({ team }: PitchingTableProps) {
 							{bullpenPitchers.map((player) => (
 								<tr key={player.person.id} className="border-t border-slate-200 align-top odd:bg-white even:bg-slate-50">
 									<td className="px-3 py-2 text-slate-700">
-										<span className="font-medium">{player.person.fullName}</span>
+										<div className="flex items-baseline justify-between gap-3">
+											<span className="font-medium">{player.person.fullName}</span>
+											<span className="shrink-0 text-xs uppercase tracking-wide text-slate-500">{getPitcherMetadata(player, team, gameData)}</span>
+										</div>
 									</td>
 									<td className="px-3 py-2 text-center text-slate-700">
 										{`${formatNumberStat(player.seasonStats.pitching.wins)}-${formatNumberStat(player.seasonStats.pitching.losses)}`}

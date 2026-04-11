@@ -323,8 +323,8 @@ const PitchingTabPanel = ({ gameData }: { gameData: GumboFeed }) => {
             className="border border-t-0 border-slate-300 bg-white/40 px-4 py-5"
         >
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <PitchingTable team={awayBoxScore} />
-                <PitchingTable team={homeBoxScore} />
+                <PitchingTable team={awayBoxScore} gameData={gameData} />
+                <PitchingTable team={homeBoxScore} gameData={gameData} />
             </div>
         </div>
     );
