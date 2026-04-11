@@ -316,7 +316,7 @@ const GameStatusBox = ({ linescore }: { linescore: Linescore }) => {
     const count = balls != null && strikes != null ? `${balls}-${strikes}` : null;
 
     return (
-        <div className="flex w-full max-w-sm items-center justify-center gap-4 text-center">
+        <div className="flex w-full max-w-sm items-center justify-center gap-12 text-center">
             <p>{linescore.inningState} {linescore.currentInningOrdinal}</p>
             <div className="flex flex-col gap-2 items-center">
                 <GameBasesState linescore={linescore} />
