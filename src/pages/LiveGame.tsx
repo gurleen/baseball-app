@@ -194,7 +194,7 @@ const CurrentPitcherCard = () => {
                 <PlayerImage playerId={pitcher.id} size={75} />
                 <div className="flex flex-col">
                     <p className="text-lg">
-                        <span>{pitcher.firstName}</span>
+                        <span>{pitcher.useName}</span>
                         <span className="font-bold"> {pitcher.lastName}</span>
                         <span className="text-stone-500 text-sm"> {pitcher.pitchHand.code}HP</span>
                     </p>
