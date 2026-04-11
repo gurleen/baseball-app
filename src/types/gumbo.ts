@@ -1439,9 +1439,21 @@ export const getPitcherStatsFromGumbo = (gumbo: GumboFeed, playerId: number): Pi
   null;
 }
 
+export const getPitcherSeasonStatsFromGumbo = (gumbo: GumboFeed, playerId: number): PitchingStats | null => {
+  return gumbo.liveData.boxscore.teams.home.players[`ID${playerId}`]?.seasonStats?.pitching ||
+  gumbo.liveData.boxscore.teams.away.players[`ID${playerId}`]?.seasonStats?.pitching ||
+  null;
+}
+
 export const getBatterStatsFromGumbo = (gumbo: GumboFeed, playerId: number): BattingStats | null => {
   return gumbo.liveData.boxscore.teams.home.players[`ID${playerId}`]?.stats?.batting ||
   gumbo.liveData.boxscore.teams.away.players[`ID${playerId}`]?.stats?.batting ||
+  null;
+}
+
+export const getBatterSeasonStatsFromGumbo = (gumbo: GumboFeed, playerId: number): BattingStats | null => {
+  return gumbo.liveData.boxscore.teams.home.players[`ID${playerId}`]?.seasonStats?.batting ||
+  gumbo.liveData.boxscore.teams.away.players[`ID${playerId}`]?.seasonStats?.batting ||
   null;
 }
 

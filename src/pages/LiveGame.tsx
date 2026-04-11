@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useGameData } from "@/hooks/useGameData";
-import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getHitDataFromPlay, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type MatchupPitch, type Linescore, type Play, type TeamData, type TeamLineScore } from "@/types/gumbo";
+import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getHitDataFromPlay, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type MatchupPitch, type Linescore, type Play, type TeamData, type TeamLineScore, getPitcherSeasonStatsFromGumbo, getBatterSeasonStatsFromGumbo, BattingStats } from "@/types/gumbo";
 import { TeamLogo } from "@/components/TeamLogo";
 import clsx from "clsx";
 import { BaseballDiamond, BaseballOuts } from "@/components/Baseball";
@@ -178,8 +178,13 @@ const CurrentPitcherCard = () => {
     if (!pitcher) { return null; }
 
     const stats = getPitcherStatsFromGumbo(gameData, pitcher.id);
+    const seasonStats = getPitcherSeasonStatsFromGumbo(gameData, pitcher.id);
+
     const numPitches = stats?.pitchesThrown ?? 0;
     const numStrikes = stats?.strikes ?? 0;
+    const era = seasonStats ? seasonStats.era : "-";
+    const ip = seasonStats ? seasonStats.inningsPitched : "-";
+    const summary = `${era} ERA, ${ip} IP`;
 
     const headerTextCss = clsx("text-sm", "text-neutral-600");
     const infoBoxCss = clsx("flex");
@@ -197,10 +202,29 @@ const CurrentPitcherCard = () => {
                     </p>
                     <p className="text-md">{stats?.summary}</p>
                     <p className="text-md">{numPitches} PIT ({numStrikes} STR)</p>
+                    <p className="text-sm text-neutral-600">{summary}</p>
                 </div>
             </div>
         </fieldset>
     );
+}
+
+const getBatterSlash = (stats: BattingStats | null) => {
+    console.log(stats);
+
+    if (!stats) {
+        return "";
+    }
+
+    const avg = stats.avg;
+    const obp = stats.obp;
+    const slg = stats.slg;
+
+    if(avg == null || obp == null || slg == null) {
+        return "";
+    }
+
+    return `${stats.avg}/${stats.obp}/${stats.slg}`;
 }
 
 const CurrentBatterCard = () => {
@@ -213,6 +237,10 @@ const CurrentBatterCard = () => {
     if (!batter) { return null; }
 
     const stats = getBatterStatsFromGumbo(gameData, batter.id);
+    const seasonStats = getBatterSeasonStatsFromGumbo(gameData, batter.id);
+
+    const slash = getBatterSlash(seasonStats);
+    const summary = seasonStats ? `${slash}, ${seasonStats.homeRuns} HR, ${seasonStats.rbi} RBI` : "";
     const headerTextCss = clsx("text-sm", "text-neutral-600");
 
     return (
@@ -230,6 +258,7 @@ const CurrentBatterCard = () => {
                         </span>
                     </p>
                     <p>{stats?.summary}</p>
+                    <p className="text-sm text-neutral-600">{summary}</p>
                 </div>
             </div>
         </fieldset>
