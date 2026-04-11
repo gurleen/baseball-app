@@ -33,9 +33,14 @@ const SPECIAL_EVENT_TYPES = new Set([
 	"stolen_base",
 	"caught_stealing",
 	"pickoff_caught_stealing",
+	"pickoff_1b",
+	"pickoff_2b",
+	"pickoff_3b",
 ]);
 
 const getNormalizedEventType = (event: PlayEvent) => event.details.eventType?.trim().toLowerCase().replaceAll(" ", "_");
+
+const isPickoffAttemptEventType = (eventType?: string) => eventType === "pickoff_1b" || eventType === "pickoff_2b" || eventType === "pickoff_3b";
 
 const formatInningLabel = (play: Play) => {
 	const half = play.about.halfInning === "top" ? "Top" : "Bottom";
@@ -71,6 +76,10 @@ const getSpecialEventBadgeLabel = (event: PlayEvent) => {
 		return "Pickoff Caught Stealing";
 	}
 
+	if (isPickoffAttemptEventType(eventType)) {
+		return "Pickoff Attempt";
+	}
+
 	return event.details.event ?? "Update";
 };
 
@@ -102,6 +111,13 @@ const getSpecialEventStyles = (event: PlayEvent) => {
 		return {
 			container: "border-orange-300 bg-orange-50",
 			badge: "bg-orange-700 text-white",
+		};
+	}
+
+	if (isPickoffAttemptEventType(eventType)) {
+		return {
+			container: "border-cyan-300 bg-cyan-50",
+			badge: "bg-cyan-700 text-white",
 		};
 	}
 
