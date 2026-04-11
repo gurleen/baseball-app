@@ -184,7 +184,10 @@ const CurrentPitcherCard = () => {
     const numStrikes = stats?.strikes ?? 0;
     const era = seasonStats ? seasonStats.era : "-";
     const ip = seasonStats ? seasonStats.inningsPitched : "-";
-    const summary = `${era} ERA, ${ip} IP`;
+    const { wins, losses } = seasonStats ?? {};
+    const winLoss = (wins != null && losses != null && (wins + losses > 0)) ? `${wins}-${losses}, ` : "";
+
+    const summary = `${winLoss}${era} ERA, ${ip} IP`;
 
     const headerTextCss = clsx("text-sm", "text-neutral-600");
     const infoBoxCss = clsx("flex");
