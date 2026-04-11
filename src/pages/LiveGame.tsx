@@ -185,8 +185,8 @@ const CurrentPitcherCard = () => {
     const infoBoxCss = clsx("flex");
 
     return (
-        <div className="flex w-full max-w-md flex-col items-center gap-2 text-center lg:items-start lg:text-left">
-            <p className={headerTextCss}>PITCHING</p>
+        <fieldset className="flex w-full max-w-md flex-col items-center gap-2 rounded border border-slate-700 px-4 pb-3 text-center lg:items-start lg:text-left">
+            <legend className={clsx(headerTextCss, "px-1")}>PITCHING</legend>
             <div className={clsx(infoBoxCss, "items-center gap-3")}>
                 <PlayerImage playerId={pitcher.id} size={75} />
                 <div className="flex flex-col">
@@ -199,7 +199,7 @@ const CurrentPitcherCard = () => {
                     <p className="text-md">{numPitches} PIT ({numStrikes} STR)</p>
                 </div>
             </div>
-        </div>
+        </fieldset>
     );
 }
 
@@ -213,10 +213,11 @@ const CurrentBatterCard = () => {
     if (!batter) { return null; }
 
     const stats = getBatterStatsFromGumbo(gameData, batter.id);
+    const headerTextCss = clsx("text-sm", "text-neutral-600");
 
     return (
-        <div className="flex w-full max-w-md flex-col items-center gap-2 text-center lg:items-start lg:text-left">
-            <p className={clsx("text-sm", "text-neutral-600")}>BATTING</p>
+        <fieldset className="flex w-full max-w-md flex-col items-center gap-2 rounded border border-slate-700 px-4 pb-3 text-center lg:items-start lg:text-left">
+            <legend className={clsx(headerTextCss, "px-1")}>BATTING</legend>
             <div className={clsx("flex", "items-center", "gap-3")}>
                 <PlayerImage playerId={batter.id} size={75} />
                 <div className="flex flex-col">
@@ -231,7 +232,7 @@ const CurrentBatterCard = () => {
                     <p>{stats?.summary}</p>
                 </div>
             </div>
-        </div>
+        </fieldset>
     )
 }
 
