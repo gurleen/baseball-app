@@ -16,6 +16,7 @@ interface PlaySummaryCardProps {
     strikeZoneBottom?: number;
     className?: string;
     badgeClassName?: string;
+    scorecardCodeClassName?: string;
     fallbackAvatarClassName?: string;
 }
 
@@ -30,6 +31,7 @@ export default function PlaySummaryCard({
     strikeZoneBottom,
     className,
     badgeClassName,
+    scorecardCodeClassName,
     fallbackAvatarClassName,
 }: PlaySummaryCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -50,7 +52,7 @@ export default function PlaySummaryCard({
                             {badgeLabel}
                         </span>
                         {scorecardCode && (
-                            <span className="inline-flex bg-white px-2.5 py-1 text-[16px] font-semibold uppercase tracking-[0.12em] text-slate-700 font-handwritten">
+                            <span className={clsx("inline-flex px-2.5 py-1 text-lg font-bold uppercase tracking-[0.12em] text-slate-700 font-handwritten", scorecardCodeClassName)}>
                                 {scorecardCode}
                             </span>
                         )}

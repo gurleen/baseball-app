@@ -1,3 +1,4 @@
+import { useState } from "react";
 import clsx from "clsx";
 import PlaySummaryCard from "@/components/PlaySummaryCard";
 import { getHitDataFromPlay, getMatchupPitchesFromPlay, getPlayerFromGumbo, type GumboFeed, type Play, type PlayEvent } from "@/types/gumbo";
@@ -48,6 +49,24 @@ const formatInningLabel = (play: Play) => {
 };
 
 const getPlayBadgeLabel = (play: Play) => play.result.event ?? play.result.eventType ?? "Play";
+
+const isScoringPlay = (play: Play) => play.about.isScoringPlay === true;
+
+const getPlayStyles = (play: Play) => {
+	if (isScoringPlay(play)) {
+		return {
+			container: "border-amber-300 bg-amber-50",
+			badge: "bg-amber-700 text-white",
+			scorecardCode: "text-amber-800",
+		};
+	}
+
+	return {
+		container: "border-slate-200 bg-white",
+		badge: "bg-slate-900",
+		scorecardCode: undefined,
+	};
+};
 
 const getSpecialEventBadgeLabel = (event: PlayEvent) => {
 	const eventType = getNormalizedEventType(event);
@@ -204,16 +223,35 @@ const buildPreviousPlayList = (plays: Play[], currentPlay?: Play): PreviousPlayL
 };
 
 export default function PreviousPlaysList({ gameData, height }: PreviousPlaysListProps) {
+	const [showOnlyScoringPlays, setShowOnlyScoringPlays] = useState(false);
 	const previousPlays = getPreviousPlays(gameData);
-	const items = buildPreviousPlayList(previousPlays, gameData.liveData.plays.currentPlay);
+	const filteredPreviousPlays = showOnlyScoringPlays ? previousPlays.filter(isScoringPlay) : previousPlays;
+	const items = buildPreviousPlayList(
+		filteredPreviousPlays,
+		showOnlyScoringPlays ? undefined : gameData.liveData.plays.currentPlay,
+	);
 
 	return (
 		<div className="flex w-full max-w-lg flex-col overflow-hidden border border-slate-300 bg-white/80 xl:max-w-2xl xl:flex-[1.25]" style={{ height }}>
-			<div className="border-b border-slate-300 px-4 py-3">
+			<div className="flex items-center justify-between gap-4 border-b border-slate-300 px-4 py-3">
 				<p className="text-sm font-semibold tracking-wide text-slate-700">Previous Plays</p>
+				<label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
+					<input
+						type="checkbox"
+						checked={showOnlyScoringPlays}
+						onChange={(event) => setShowOnlyScoringPlays(event.target.checked)}
+						className="h-4 w-4 rounded border-slate-300 text-amber-700 focus:ring-amber-600"
+					/>
+					<span>Only Scoring Plays</span>
+				</label>
 			</div>
 			<div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
 				<div className="flex flex-col gap-3">
+					{filteredPreviousPlays.length === 0 ? (
+						<div className="rounded-md border border-dashed border-slate-300 bg-slate-100 px-3 py-6 text-center text-sm text-slate-600">
+							No scoring plays yet.
+						</div>
+					) : null}
 					{items.map((item) => {
 						if (item.kind === "inning") {
 							return (
@@ -256,6 +294,7 @@ export default function PreviousPlaysList({ gameData, height }: PreviousPlaysLis
 						const description = item.play.result.description ?? "No description available.";
 						const hitData = getHitDataFromPlay(item.play);
 						const pitches = getMatchupPitchesFromPlay(item.play);
+						const styles = getPlayStyles(item.play);
 
 						return (
 							<PlaySummaryCard
@@ -268,8 +307,9 @@ export default function PreviousPlaysList({ gameData, height }: PreviousPlaysLis
 								pitches={pitches}
 								strikeZoneTop={batter?.strikeZoneTop}
 								strikeZoneBottom={batter?.strikeZoneBottom}
-								className="border-slate-200 bg-white"
-								badgeClassName="bg-slate-900"
+								className={styles.container}
+								badgeClassName={styles.badge}
+								scorecardCodeClassName={styles.scorecardCode}
 							/>
 						);
 					})}
