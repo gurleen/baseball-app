@@ -139,7 +139,7 @@ const PitchSequencePanel = ({ pitches, height, currentPlay, batterId, strikeZone
                     stickyHeader
                     resultRow={showCompletedResult ? (
                         <tr className="border-t border-slate-300 align-top">
-                            <td colSpan={6} className="p-3">
+                            <td colSpan={7} className="p-3">
                                 <PlaySummaryCard
                                     badgeLabel={resultBadgeLabel}
                                     scorecardCode={scorecardCode}
