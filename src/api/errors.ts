@@ -13,7 +13,7 @@ export class MlbApiError extends Error {
 }
 
 export class MlbApiNetworkError extends Error {
-  readonly cause: unknown;
+  override readonly cause: unknown;
   readonly url: string;
 
   constructor(message: string, options: { url: string; cause: unknown }) {
@@ -26,7 +26,7 @@ export class MlbApiNetworkError extends Error {
 
 export class MlbApiParseError extends Error {
   readonly url: string;
-  readonly cause: unknown;
+  override readonly cause: unknown;
 
   constructor(message: string, options: { url: string; cause: unknown }) {
     super(message);

@@ -23,6 +23,10 @@ export interface UseGameDataResult {
   isLoading: boolean;
   isRefreshing: boolean;
   lastUpdatedAt: Date | null;
+  displayDelayMs: number;
+  isDisplayPaused: boolean;
+  setDisplayDelayMs: (delayMs: number) => void;
+  setIsDisplayPaused: (isPaused: boolean) => void;
   refetch: () => Promise<void>;
 }
 
@@ -32,11 +36,108 @@ export function useGameData(query: UseGameDataQuery): UseGameDataResult {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const [displayDelayMsState, setDisplayDelayMsState] = useState(0);
+  const [isDisplayPausedState, setIsDisplayPausedState] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
-  const dataRef = useRef<GumboFeed | null>(null);
+  const liveDataRef = useRef<GumboFeed | null>(null);
+  const queuedDisplaySnapshotsRef = useRef<Array<{ data: GumboFeed; receivedAt: number }>>([]);
+  const displayUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const displayDelayMsRef = useRef(0);
+  const isDisplayPausedRef = useRef(false);
   const pushUpdateIdRef = useRef(crypto.randomUUID());
   const queryKey = JSON.stringify(query);
   const pollIntervalMs = query.pollIntervalMs ?? DEFAULT_GAME_DATA_POLL_INTERVAL_MS;
+
+  function clearScheduledDisplayUpdate() {
+    if (displayUpdateTimerRef.current) {
+      clearTimeout(displayUpdateTimerRef.current);
+      displayUpdateTimerRef.current = null;
+    }
+  }
+
+  function commitDisplayedData(nextData: GumboFeed) {
+    setData(nextData);
+    setLastUpdatedAt(new Date());
+  }
+
+  function scheduleNextDisplayUpdate() {
+    clearScheduledDisplayUpdate();
+
+    if (isDisplayPausedRef.current || queuedDisplaySnapshotsRef.current.length === 0) {
+      return;
+    }
+
+    const nextSnapshot = queuedDisplaySnapshotsRef.current[0];
+    if (!nextSnapshot) {
+      return;
+    }
+
+    const nextVisibleAt = nextSnapshot.receivedAt + displayDelayMsRef.current;
+    const timeoutMs = Math.max(0, nextVisibleAt - Date.now());
+
+    displayUpdateTimerRef.current = setTimeout(() => {
+      displayUpdateTimerRef.current = null;
+      drainEligibleDisplaySnapshots();
+    }, timeoutMs);
+  }
+
+  function drainEligibleDisplaySnapshots() {
+    if (isDisplayPausedRef.current) {
+      clearScheduledDisplayUpdate();
+      return;
+    }
+
+    const cutoffTime = Date.now() - displayDelayMsRef.current;
+    let nextVisibleData: GumboFeed | null = null;
+
+    while (queuedDisplaySnapshotsRef.current[0] && queuedDisplaySnapshotsRef.current[0].receivedAt <= cutoffTime) {
+      nextVisibleData = queuedDisplaySnapshotsRef.current.shift()?.data ?? null;
+    }
+
+    if (nextVisibleData) {
+      commitDisplayedData(nextVisibleData);
+    }
+
+    scheduleNextDisplayUpdate();
+  }
+
+  function publishLiveUpdate(nextData: GumboFeed, options?: { displayImmediately?: boolean }) {
+    liveDataRef.current = nextData;
+
+    if (options?.displayImmediately) {
+      queuedDisplaySnapshotsRef.current = [];
+      clearScheduledDisplayUpdate();
+      commitDisplayedData(nextData);
+      return;
+    }
+
+    queuedDisplaySnapshotsRef.current.push({
+      data: nextData,
+      receivedAt: Date.now(),
+    });
+
+    drainEligibleDisplaySnapshots();
+  }
+
+  function setDisplayDelayMs(delayMs: number) {
+    const normalizedDelayMs = Math.max(0, Math.round(delayMs));
+
+    displayDelayMsRef.current = normalizedDelayMs;
+    setDisplayDelayMsState(normalizedDelayMs);
+    drainEligibleDisplaySnapshots();
+  }
+
+  function setIsDisplayPaused(isPaused: boolean) {
+    isDisplayPausedRef.current = isPaused;
+    setIsDisplayPausedState(isPaused);
+
+    if (isPaused) {
+      clearScheduledDisplayUpdate();
+      return;
+    }
+
+    drainEligibleDisplaySnapshots();
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -44,16 +145,12 @@ export function useGameData(query: UseGameDataQuery): UseGameDataResult {
     let nextPollTimer: ReturnType<typeof setTimeout> | null = null;
 
     pushUpdateIdRef.current = crypto.randomUUID();
-
-    function updateData(nextData: GumboFeed) {
-      dataRef.current = nextData;
-      setData(nextData);
-      setLastUpdatedAt(new Date());
-    }
+    queuedDisplaySnapshotsRef.current = [];
+    clearScheduledDisplayUpdate();
 
     function normalizeFallbackData(nextData: MlbGameFeedDiffPatchFallback) {
       return {
-        copyright: dataRef.current?.copyright ?? "",
+        copyright: liveDataRef.current?.copyright ?? "",
         ...nextData,
       } satisfies GumboFeed;
     }
@@ -69,7 +166,7 @@ export function useGameData(query: UseGameDataQuery): UseGameDataResult {
     }
 
     async function fetchFullFeed() {
-      const shouldShowLoading = dataRef.current === null;
+      const shouldShowLoading = liveDataRef.current === null;
 
       setIsLoading(shouldShowLoading);
       setIsRefreshing(!shouldShowLoading);
@@ -85,7 +182,7 @@ export function useGameData(query: UseGameDataQuery): UseGameDataResult {
           return;
         }
 
-        updateData(nextData);
+        publishLiveUpdate(nextData, { displayImmediately: true });
       } catch (nextError) {
         if (!isMounted || isAbortError(nextError)) {
           return;
@@ -102,7 +199,7 @@ export function useGameData(query: UseGameDataQuery): UseGameDataResult {
     }
 
     async function pollForDiffPatch() {
-      const currentData = dataRef.current;
+      const currentData = liveDataRef.current;
 
       if (!currentData) {
         await fetchFullFeed();
@@ -137,12 +234,12 @@ export function useGameData(query: UseGameDataQuery): UseGameDataResult {
               ).newDocument as GumboFeed;
             }
 
-            updateData(patchedData);
+            publishLiveUpdate(patchedData);
           } else {
             setLastUpdatedAt(new Date());
           }
         } else {
-          updateData(normalizeFallbackData(nextData));
+          publishLiveUpdate(normalizeFallbackData(nextData));
         }
 
         pushUpdateIdRef.current = crypto.randomUUID();
@@ -166,6 +263,8 @@ export function useGameData(query: UseGameDataQuery): UseGameDataResult {
     return () => {
       isMounted = false;
       controller.abort();
+      clearScheduledDisplayUpdate();
+      queuedDisplaySnapshotsRef.current = [];
 
       if (nextPollTimer) {
         clearTimeout(nextPollTimer);
@@ -179,6 +278,10 @@ export function useGameData(query: UseGameDataQuery): UseGameDataResult {
     isLoading,
     isRefreshing,
     lastUpdatedAt,
+    displayDelayMs: displayDelayMsState,
+    isDisplayPaused: isDisplayPausedState,
+    setDisplayDelayMs,
+    setIsDisplayPaused,
     refetch: async () => {
       setRefreshToken(current => current + 1);
     },

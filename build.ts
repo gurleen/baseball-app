@@ -33,7 +33,9 @@ Example:
   process.exit(0);
 }
 
-const toCamelCase = (str: string): string => str.replace(/-([a-z])/g, g => g[1].toUpperCase());
+type ParsedBuildConfig = Partial<Bun.BuildConfig> & Record<string, unknown>;
+
+const toCamelCase = (str: string): string => str.replace(/-([a-z])/g, (_match, character: string) => character.toUpperCase());
 
 const parseValue = (value: string): any => {
   if (value === "true") return true;
@@ -47,8 +49,12 @@ const parseValue = (value: string): any => {
   return value;
 };
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 function parseArgs(): Partial<Bun.BuildConfig> {
-  const config: Partial<Bun.BuildConfig> = {};
+  const config: ParsedBuildConfig = {};
   const args = process.argv.slice(2);
 
   for (let i = 0; i < args.length; i++) {
@@ -82,8 +88,13 @@ function parseArgs(): Partial<Bun.BuildConfig> {
 
     if (key.includes(".")) {
       const [parentKey, childKey] = key.split(".");
-      config[parentKey] = config[parentKey] || {};
-      config[parentKey][childKey] = parseValue(value);
+      if (!parentKey || !childKey) {
+        continue;
+      }
+
+      const parentConfig = isPlainObject(config[parentKey]) ? config[parentKey] : {};
+      parentConfig[childKey] = parseValue(value);
+      config[parentKey] = parentConfig;
     } else {
       config[key] = parseValue(value);
     }

@@ -14,10 +14,18 @@ import PreviousPlaysList from "@/components/PreviousPlaysList";
 import StrikeZone, { getStrikeZoneHeight } from "@/components/StrikeZone";
 import { getScorecardCodeFromPlay } from "@/util/scorecard";
 
-const GameDataContext = createContext<GumboFeed | null>(null);
+type GameDataContextValue = {
+    gameData: GumboFeed;
+    displayDelayMs: number;
+    isDisplayPaused: boolean;
+    setDisplayDelayMs: (delayMs: number) => void;
+    setIsDisplayPaused: (isPaused: boolean) => void;
+};
+
+const GameDataContext = createContext<GameDataContextValue | null>(null);
 const DESKTOP_STRIKE_ZONE_WIDTH = 350;
 const MOBILE_STRIKE_ZONE_WIDTH = 280;
-type LiveGameTab = "summary" | "at-bat" | "offense" | "pitching";
+type LiveGameTab = "summary" | "at-bat" | "offense" | "pitching" | "settings";
 
 const hasCompletedPlayResult = (play: Play) => {
     return play.about.isComplete && (Boolean(play.result.event) || Boolean(play.result.eventType) || Boolean(play.result.description));
@@ -27,11 +35,35 @@ const isGameFinal = (gameData: GumboFeed) => {
     return gameData.gameData.status.abstractGameState === "Final" || gameData.gameData.status.detailedState === "Final";
 };
 
+const getCalibrationPitchKey = (currentPlay: Play | null | undefined, pitch: MatchupPitch | null) => {
+    if (!currentPlay || !pitch) {
+        return null;
+    }
+
+    return [
+        currentPlay.atBatIndex,
+        pitch.count ?? "",
+        pitch.result ?? "",
+        pitch.pitchType ?? "",
+        pitch.pitchData.startSpeed ?? "",
+    ].join(":");
+};
+
 function useLiveGameContext() {
     const value = useContext(GameDataContext);
 
     if (!value) {
         throw new Error("useLiveGameContext must be used within LiveGame");
+    }
+
+    return value.gameData;
+}
+
+function useLiveGameController() {
+    const value = useContext(GameDataContext);
+
+    if (!value) {
+        throw new Error("useLiveGameController must be used within LiveGame");
     }
 
     return value;
@@ -66,10 +98,21 @@ function LiveGameSummary() {
 }
 
 const CurrentMatchupStrikeZone = () => {
-    const gameData = useLiveGameContext();
+    const liveGameController = useLiveGameController();
+    const gameData = liveGameController.gameData;
     const currentPlay = gameData.liveData.plays.currentPlay;
     const gameIsFinal = isGameFinal(gameData);
-    const [activeTab, setActiveTab] = useState<LiveGameTab>(() => gameIsFinal ? "summary" : "at-bat");
+    const [settingsPitch, setSettingsPitch] = useState<MatchupPitch | null>(null);
+    const [settingsPitchReceivedAt, setSettingsPitchReceivedAt] = useState<number | null>(null);
+    const [latestDisplayedPitchKey, setLatestDisplayedPitchKey] = useState<string | null>(null);
+    const [latestDisplayedPitchReceivedAt, setLatestDisplayedPitchReceivedAt] = useState<number | null>(null);
+    const [activeTab, setActiveTab] = useState<LiveGameTab>(() => {
+        if (gameIsFinal) {
+            return "summary";
+        }
+
+        return currentPlay ? "at-bat" : "settings";
+    });
     const [strikeZoneWidth, setStrikeZoneWidth] = useState(() => {
         if (typeof window === "undefined") {
             return DESKTOP_STRIKE_ZONE_WIDTH;
@@ -105,11 +148,62 @@ const CurrentMatchupStrikeZone = () => {
     const batter = currentPlay ? getPlayerFromGumbo(gameData, currentPlay.matchup.batter.id) : null;
     const canShowAtBat = Boolean(currentPlay && batter);
     const pitches = currentPlay ? getCurrentMatchupPitches(gameData) : [];
+    const latestPitch = pitches.at(-1) ?? null;
+    const latestPitchKey = getCalibrationPitchKey(currentPlay, latestPitch);
+
+    useEffect(() => {
+        if (!latestPitchKey) {
+            setLatestDisplayedPitchKey(null);
+            setLatestDisplayedPitchReceivedAt(null);
+            return;
+        }
+
+        if (latestDisplayedPitchKey !== latestPitchKey) {
+            setLatestDisplayedPitchKey(latestPitchKey);
+            setLatestDisplayedPitchReceivedAt(Date.now());
+        }
+    }, [latestDisplayedPitchKey, latestPitchKey]);
+
+    useEffect(() => {
+        if (activeTab !== "settings") {
+            setSettingsPitch(null);
+            setSettingsPitchReceivedAt(null);
+            return;
+        }
+
+        if (!settingsPitch && latestPitch) {
+            setSettingsPitch(latestPitch);
+            setSettingsPitchReceivedAt(latestDisplayedPitchReceivedAt ?? Date.now());
+        }
+    }, [activeTab, latestDisplayedPitchReceivedAt, latestPitch, settingsPitch]);
+
+    useEffect(() => {
+        if (!canShowAtBat && activeTab === "at-bat") {
+            setActiveTab("settings");
+        }
+    }, [activeTab, canShowAtBat]);
+
     const strikeZoneHeight = batter ? getStrikeZoneHeight({
         strikeZoneTop: batter.strikeZoneTop,
         strikeZoneBottom: batter.strikeZoneBottom,
         width: strikeZoneWidth,
     }) : 0;
+
+    const finishDelayCalibration = () => {
+        if (settingsPitchReceivedAt == null) {
+            return;
+        }
+
+        liveGameController.setDisplayDelayMs(Math.max(0, Date.now() - settingsPitchReceivedAt));
+    };
+
+    const resetDelay = () => {
+        liveGameController.setDisplayDelayMs(0);
+    };
+
+    const adjustDelayByOneSecond = (direction: -1 | 1) => {
+        liveGameController.setDisplayDelayMs(Math.max(0, liveGameController.displayDelayMs + (direction * 1000)));
+    };
 
     return (
         <section className="mt-6 flex w-full self-stretch flex-col">
@@ -142,6 +236,12 @@ const CurrentMatchupStrikeZone = () => {
                     activeTab={activeTab}
                     onSelect={setActiveTab}
                 />
+                <LiveGameTabButton
+                    tab="settings"
+                    label="SETTINGS"
+                    activeTab={activeTab}
+                    onSelect={setActiveTab}
+                />
             </div>
             {gameIsFinal && activeTab === "summary" && <SummaryTabPanel gameData={gameData} />}
             {currentPlay && canShowAtBat && batter && activeTab === "at-bat" && (
@@ -158,6 +258,17 @@ const CurrentMatchupStrikeZone = () => {
             )}
             {activeTab === "offense" && <OffenseTabPanel gameData={gameData} />}
             {activeTab === "pitching" && <PitchingTabPanel gameData={gameData} />}
+            {activeTab === "settings" && (
+                <SettingsTabPanel
+                    latestPitch={settingsPitch}
+                    displayDelayMs={liveGameController.displayDelayMs}
+                    calibrationPitchReceivedAt={settingsPitchReceivedAt}
+                    onSubtractSecond={() => adjustDelayByOneSecond(-1)}
+                    onAddSecond={() => adjustDelayByOneSecond(1)}
+                    onResumeCalibration={finishDelayCalibration}
+                    onResetDelay={resetDelay}
+                />
+            )}
         </section>
     );
 }
@@ -396,6 +507,18 @@ const formatAttendance = (attendance?: number) => {
     return attendance.toLocaleString();
 };
 
+const formatDelayDuration = (delayMs: number) => {
+    if (!Number.isFinite(delayMs) || delayMs <= 0) {
+        return "No delay";
+    }
+
+    if (delayMs < 1000) {
+        return `${delayMs} ms`;
+    }
+
+    return `${(delayMs / 1000).toFixed(1)} sec`;
+};
+
 const getScoringTeam = (play: Play, gameData: GumboFeed) => {
     return play.about.halfInning === "top" ? gameData.gameData.teams.away : gameData.gameData.teams.home;
 };
@@ -546,6 +669,137 @@ const SummaryTabPanel = ({ gameData }: { gameData: GumboFeed }) => {
                             </div>
                         ))}
                     </dl>
+                </section>
+            </div>
+        </div>
+    );
+};
+
+const SettingsTabPanel = ({
+    latestPitch,
+    displayDelayMs,
+    calibrationPitchReceivedAt,
+    onSubtractSecond,
+    onAddSecond,
+    onResumeCalibration,
+    onResetDelay,
+}: {
+    latestPitch: MatchupPitch | null;
+    displayDelayMs: number;
+    calibrationPitchReceivedAt: number | null;
+    onSubtractSecond: () => void;
+    onAddSecond: () => void;
+    onResumeCalibration: () => void;
+    onResetDelay: () => void;
+}) => {
+    const canCalibrate = Boolean(latestPitch);
+
+    return (
+        <div
+            role="tabpanel"
+            id={getLiveGamePanelId("settings")}
+            aria-labelledby={getLiveGameTabId("settings")}
+            className="border border-t-0 border-slate-300 bg-white/40 px-4 py-5"
+        >
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
+                <section className="overflow-hidden border border-slate-300 bg-white/80">
+                    <div className="border-b border-slate-300 px-4 py-3">
+                        <p className="text-sm font-semibold tracking-wide text-slate-700">Live Feed Delay</p>
+                    </div>
+                    <div className="flex flex-col gap-4 p-4 text-sm text-slate-700">
+                        <div className="rounded border border-slate-200 bg-slate-50 px-4 py-3">
+                            <p className="text-xs font-semibold tracking-wide text-slate-500">CURRENT DELAY</p>
+                            <p className="mt-2 text-lg font-semibold text-slate-900">{formatDelayDuration(displayDelayMs)}</p>
+                            <p className="mt-1 text-xs text-slate-500">New live updates wait this long before they appear on the page.</p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={onSubtractSecond}
+                                    disabled={displayDelayMs === 0}
+                                    className={clsx(
+                                        "rounded border px-3 py-1.5 text-xs font-semibold transition duration-200",
+                                        displayDelayMs === 0
+                                            ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                            : "border-slate-300 bg-white text-slate-700 hover:cursor-pointer",
+                                    )}
+                                >
+                                    -1 sec
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onAddSecond}
+                                    className="rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition duration-200 hover:cursor-pointer"
+                                >
+                                    +1 sec
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="rounded border border-slate-200 bg-white px-4 py-3">
+                            <p className="text-xs font-semibold tracking-wide text-slate-500">HOW TO CALIBRATE</p>
+                            {canCalibrate ? (
+                                <p className="mt-2 leading-6 text-slate-700">
+                                    This pitch is frozen while the settings tab stays open. Click play when the same pitch appears on your TV broadcast, and the elapsed time since this pitch arrived will become the feed delay.
+                                </p>
+                            ) : (
+                                <p className="mt-2 leading-6 text-slate-700">
+                                    Wait for the next pitch to appear here, then click play when that same pitch reaches your TV broadcast.
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                onClick={onResumeCalibration}
+                                disabled={!canCalibrate || calibrationPitchReceivedAt == null}
+                                className={clsx(
+                                    "rounded border px-4 py-2 text-sm font-semibold transition duration-200",
+                                    canCalibrate && calibrationPitchReceivedAt != null
+                                        ? "border-emerald-700 bg-emerald-700 text-white hover:cursor-pointer"
+                                        : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400",
+                                )}
+                            >
+                                Play
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onResetDelay}
+                                disabled={displayDelayMs === 0}
+                                className={clsx(
+                                    "rounded border px-4 py-2 text-sm font-semibold transition duration-200",
+                                    displayDelayMs === 0
+                                        ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                        : "border-slate-300 bg-white text-slate-700 hover:cursor-pointer",
+                                )}
+                            >
+                                Reset Delay
+                            </button>
+                        </div>
+
+                        <p className="text-xs text-slate-500">
+                            {canCalibrate && calibrationPitchReceivedAt != null
+                                ? "The calibration pitch is locked below. Click play when you see that same pitch on TV."
+                                : "The feed is currently playing with the configured delay."}
+                        </p>
+                    </div>
+                </section>
+
+                <section className="overflow-hidden border border-slate-300 bg-white/80">
+                    <div className="border-b border-slate-300 px-4 py-3">
+                        <p className="text-sm font-semibold tracking-wide text-slate-700">Calibration Pitch</p>
+                    </div>
+                    <div className="p-4">
+                        {latestPitch ? (
+                            <div className="max-w-sm overflow-hidden rounded border border-slate-200 bg-white">
+                                <PitchSequenceTable pitches={[latestPitch]} compact />
+                            </div>
+                        ) : (
+                            <div className="rounded border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                                No pitch is available yet. The most recent pitch will appear here once the live feed receives one.
+                            </div>
+                        )}
+                    </div>
                 </section>
             </div>
         </div>
@@ -928,13 +1182,20 @@ export default function LiveGame() {
     }
 
     const gameData = useGameData({ gameId });
+    const gameDataContextValue = gameData.data ? {
+        gameData: gameData.data,
+        displayDelayMs: gameData.displayDelayMs,
+        isDisplayPaused: gameData.isDisplayPaused,
+        setDisplayDelayMs: gameData.setDisplayDelayMs,
+        setIsDisplayPaused: gameData.setIsDisplayPaused,
+    } satisfies GameDataContextValue : null;
 
     return (
         <main className="min-h-full px-3 py-6 md:px-8 md:py-5 border-2 border-neutral-200 bg-gray-500/10 drop-shadow-gray-900 drop-shadow-xl/40 lg:mx-10 font-mono">
             {gameData.isLoading && <p className="text-neutral-600">Loading game data...</p>}
             {gameData.error && <p className="text-red-600">Error loading game data: {gameData.error.message}</p>}
-            {gameData.data && (
-                <GameDataContext.Provider value={gameData.data}>
+            {gameDataContextValue && (
+                <GameDataContext.Provider value={gameDataContextValue}>
                     <LiveGameSummary />
                 </GameDataContext.Provider>
             )}
