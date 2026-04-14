@@ -115,7 +115,7 @@ export default function PitchSequenceTable({
 					<th className={clsx(typeWidth, headerCellClassName)}>Type</th>
 					<th className={clsx(resultWidth, headerCellClassName)}>Result</th>
 					<th className={clsx(breakWidth, headerCellClassName)}>HB</th>
-					<th className={clsx(breakWidth, headerCellClassName)}>VB</th>
+					<th className={clsx(breakWidth, headerCellClassName)}>IVB</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -140,7 +140,7 @@ export default function PitchSequenceTable({
 						<td className={bodyCellClassName}>{formatPitchType(pitch.pitchType)}</td>
 						<td className={clsx(bodyCellClassName, "whitespace-normal")}>{formatPitchResultAndCount(pitch)}</td>
 						<td className={bodyCellClassName}>{formatPitchBreak(pitch.pitchData.breaks?.breakHorizontal)}</td>
-						<td className={bodyCellClassName}>{formatPitchBreak(pitch.pitchData.breaks?.breakVertical)}</td>
+						<td className={bodyCellClassName}>{formatPitchBreak(pitch.pitchData.breaks?.breakVerticalInduced)}</td>
 					</tr>
 				))}
 			</tbody>
