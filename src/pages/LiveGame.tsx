@@ -25,7 +25,7 @@ type GameDataContextValue = {
 const GameDataContext = createContext<GameDataContextValue | null>(null);
 const DESKTOP_STRIKE_ZONE_WIDTH = 350;
 const MOBILE_STRIKE_ZONE_WIDTH = 280;
-type LiveGameTab = "summary" | "at-bat" | "offense" | "pitching" | "settings";
+type LiveGameTab = "summary" | "preview" | "at-bat" | "offense" | "pitching" | "settings";
 
 const hasCompletedPlayResult = (play: Play) => {
     return play.about.isComplete && (Boolean(play.result.event) || Boolean(play.result.eventType) || Boolean(play.result.description));
@@ -33,6 +33,12 @@ const hasCompletedPlayResult = (play: Play) => {
 
 const isGameFinal = (gameData: GumboFeed) => {
     return gameData.gameData.status.abstractGameState === "Final" || gameData.gameData.status.detailedState === "Final";
+};
+
+const isGamePregame = (gameData: GumboFeed) => {
+    const { abstractGameState, detailedState } = gameData.gameData.status;
+
+    return abstractGameState === "Preview" || detailedState === "Pre-Game" || detailedState === "Warmup";
 };
 
 const getCalibrationPitchKey = (currentPlay: Play | null | undefined, pitch: MatchupPitch | null) => {
@@ -92,7 +98,7 @@ function LiveGameSummary() {
                 {currentPlay && !gameIsFinal && <MatchupRow />}
             </div>
 
-            {(currentPlay || gameIsFinal) && <CurrentMatchupStrikeZone />}
+            <CurrentMatchupStrikeZone />
         </div>
     );
 }
@@ -102,6 +108,7 @@ const CurrentMatchupStrikeZone = () => {
     const gameData = liveGameController.gameData;
     const currentPlay = gameData.liveData.plays.currentPlay;
     const gameIsFinal = isGameFinal(gameData);
+    const gameIsPregame = isGamePregame(gameData);
     const [settingsPitch, setSettingsPitch] = useState<MatchupPitch | null>(null);
     const [settingsPitchReceivedAt, setSettingsPitchReceivedAt] = useState<number | null>(null);
     const [latestDisplayedPitchKey, setLatestDisplayedPitchKey] = useState<string | null>(null);
@@ -109,6 +116,10 @@ const CurrentMatchupStrikeZone = () => {
     const [activeTab, setActiveTab] = useState<LiveGameTab>(() => {
         if (gameIsFinal) {
             return "summary";
+        }
+
+        if (gameIsPregame) {
+            return "preview";
         }
 
         return currentPlay ? "at-bat" : "settings";
@@ -138,12 +149,18 @@ const CurrentMatchupStrikeZone = () => {
             return;
         }
 
-        setActiveTab((currentTab) => currentTab === "summary" ? "at-bat" : currentTab);
-    }, [gameIsFinal]);
+        setActiveTab((currentTab) => {
+            if (currentTab !== "summary") {
+                return currentTab;
+            }
 
-    if (!currentPlay && !gameIsFinal) {
-        return null;
-    }
+            if (gameIsPregame) {
+                return "preview";
+            }
+
+            return currentPlay ? "at-bat" : "settings";
+        });
+    }, [currentPlay, gameIsFinal, gameIsPregame]);
 
     const batter = currentPlay ? getPlayerFromGumbo(gameData, currentPlay.matchup.batter.id) : null;
     const canShowAtBat = Boolean(currentPlay && batter);
@@ -179,9 +196,9 @@ const CurrentMatchupStrikeZone = () => {
 
     useEffect(() => {
         if (!canShowAtBat && activeTab === "at-bat") {
-            setActiveTab("settings");
+            setActiveTab(gameIsPregame ? "preview" : "settings");
         }
-    }, [activeTab, canShowAtBat]);
+    }, [activeTab, canShowAtBat, gameIsPregame]);
 
     const strikeZoneHeight = batter ? getStrikeZoneHeight({
         strikeZoneTop: batter.strikeZoneTop,
@@ -216,6 +233,12 @@ const CurrentMatchupStrikeZone = () => {
                         onSelect={setActiveTab}
                     />
                 )}
+                <LiveGameTabButton
+                    tab="preview"
+                    label="PREVIEW"
+                    activeTab={activeTab}
+                    onSelect={setActiveTab}
+                />
                 {canShowAtBat && (
                 <LiveGameTabButton
                     tab="at-bat"
@@ -244,6 +267,7 @@ const CurrentMatchupStrikeZone = () => {
                 />
             </div>
             {gameIsFinal && activeTab === "summary" && <SummaryTabPanel gameData={gameData} />}
+            {activeTab === "preview" && <PreviewTabPanel gameData={gameData} />}
             {currentPlay && canShowAtBat && batter && activeTab === "at-bat" && (
                 <AtBatTabPanel
                     pitches={pitches}
@@ -340,6 +364,90 @@ const getCurrentLineup = (team: BoxscoreTeamData) => {
             slot,
             player,
         }));
+};
+
+const getStartingLineup = (team: BoxscoreTeamData) => {
+    const players = Object.values(team.players);
+    const startersBySlot = new Map<number, BoxscorePlayer>();
+
+    for (const player of players) {
+        const lineupSlot = getLineupSlot(player);
+
+        if (!lineupSlot) {
+            continue;
+        }
+
+        const currentStarter = startersBySlot.get(lineupSlot);
+
+        if (!currentStarter) {
+            startersBySlot.set(lineupSlot, player);
+            continue;
+        }
+
+        const currentOrder = Number.parseInt(currentStarter.battingOrder ?? "999", 10);
+        const nextOrder = Number.parseInt(player.battingOrder ?? "999", 10);
+
+        if (nextOrder <= currentOrder) {
+            startersBySlot.set(lineupSlot, player);
+        }
+    }
+
+    const lineup = Array.from(startersBySlot.entries())
+        .sort(([leftSlot], [rightSlot]) => leftSlot - rightSlot)
+        .map(([slot, player]) => ({
+            slot,
+            player,
+        }));
+
+    return lineup.length > 0 ? lineup : getCurrentLineup(team);
+};
+
+const formatPreviewDisplayStat = (value?: number | string) => {
+    if (typeof value === "number") {
+        return value;
+    }
+
+    if (typeof value === "string" && value.length > 0) {
+        return value;
+    }
+
+    return "-";
+};
+
+const formatPreviewCountStat = (value?: number) => {
+    return typeof value === "number" ? value : 0;
+};
+
+const getPlayerBatThrows = (gameData: GumboFeed, playerId: number) => {
+    const player = getPlayerFromGumbo(gameData, playerId);
+
+    if (!player) {
+        return "-";
+    }
+
+    return `${player.batSide.code}/${player.pitchHand.code}`;
+};
+
+const getPitcherThrows = (gameData: GumboFeed, playerId: number) => {
+    const player = getPlayerFromGumbo(gameData, playerId);
+
+    return player?.pitchHand.code ?? "-";
+};
+
+const getStartingPitcher = (team: BoxscoreTeamData, gameData: GumboFeed) => {
+    const probablePitchers = gameData.gameData.probablePitchers;
+    const probableStarterId = probablePitchers
+        ? team.team.id === gameData.gameData.teams.away.id
+            ? probablePitchers.away.id
+            : probablePitchers.home.id
+        : undefined;
+    const starterId = probableStarterId ?? team.pitchers[0];
+
+    if (!starterId) {
+        return null;
+    }
+
+    return team.players[`ID${starterId}`] ?? null;
 };
 
 const LiveGameTabButton = ({
@@ -457,6 +565,124 @@ const PitchingTabPanel = ({ gameData }: { gameData: GumboFeed }) => {
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 <PitchingTable team={awayBoxScore} gameData={gameData} />
                 <PitchingTable team={homeBoxScore} gameData={gameData} />
+            </div>
+        </div>
+    );
+};
+
+const PreviewTeamPanel = ({ team, gameData }: { team: BoxscoreTeamData; gameData: GumboFeed }) => {
+    const startingPitcher = getStartingPitcher(team, gameData);
+    const lineup = getStartingLineup(team);
+
+    return (
+        <section className="overflow-hidden border border-slate-300 bg-white/80">
+            <div className="border-b border-slate-300 px-4 py-3">
+                <p className="text-sm font-semibold tracking-wide text-slate-700">{team.team.name}</p>
+                <p className="text-xs font-semibold tracking-wide text-slate-500">PROJECTED STARTERS</p>
+            </div>
+            <div className="flex flex-col gap-4 p-4">
+                <div className="rounded border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p className="text-xs font-semibold tracking-wide text-slate-500">STARTING PITCHER</p>
+                    {startingPitcher ? (
+                        <div className="mt-3 flex flex-col gap-4">
+                            <div className="flex items-center gap-3">
+                                <PlayerImage playerId={startingPitcher.person.id} size={72} />
+                                <div>
+                                    <p className="text-lg font-semibold text-slate-900">{startingPitcher.person.fullName}</p>
+                                    <p className="text-sm text-slate-600">Throws {getPitcherThrows(gameData, startingPitcher.person.id)}</p>
+                                </div>
+                            </div>
+                            <dl className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3 xl:grid-cols-6">
+                                <div className="rounded border border-slate-200 bg-white px-3 py-2">
+                                    <dt className="text-xs font-semibold tracking-wide text-slate-500">W-L</dt>
+                                    <dd className="mt-1 text-slate-800">{formatPreviewCountStat(startingPitcher.seasonStats.pitching.wins)}-{formatPreviewCountStat(startingPitcher.seasonStats.pitching.losses)}</dd>
+                                </div>
+                                <div className="rounded border border-slate-200 bg-white px-3 py-2">
+                                    <dt className="text-xs font-semibold tracking-wide text-slate-500">ERA</dt>
+                                    <dd className="mt-1 text-slate-800">{formatPreviewDisplayStat(startingPitcher.seasonStats.pitching.era)}</dd>
+                                </div>
+                                <div className="rounded border border-slate-200 bg-white px-3 py-2">
+                                    <dt className="text-xs font-semibold tracking-wide text-slate-500">IP</dt>
+                                    <dd className="mt-1 text-slate-800">{formatPreviewDisplayStat(startingPitcher.seasonStats.pitching.inningsPitched)}</dd>
+                                </div>
+                                <div className="rounded border border-slate-200 bg-white px-3 py-2">
+                                    <dt className="text-xs font-semibold tracking-wide text-slate-500">WHIP</dt>
+                                    <dd className="mt-1 text-slate-800">{formatPreviewDisplayStat(startingPitcher.seasonStats.pitching.whip)}</dd>
+                                </div>
+                                <div className="rounded border border-slate-200 bg-white px-3 py-2">
+                                    <dt className="text-xs font-semibold tracking-wide text-slate-500">K</dt>
+                                    <dd className="mt-1 text-slate-800">{formatPreviewCountStat(startingPitcher.seasonStats.pitching.strikeOuts)}</dd>
+                                </div>
+                                <div className="rounded border border-slate-200 bg-white px-3 py-2">
+                                    <dt className="text-xs font-semibold tracking-wide text-slate-500">BB/9</dt>
+                                    <dd className="mt-1 text-slate-800">{formatPreviewDisplayStat(startingPitcher.seasonStats.pitching.walksPer9Inn)}</dd>
+                                </div>
+                            </dl>
+                        </div>
+                    ) : (
+                        <p className="mt-2 text-sm text-slate-500">Starting pitcher has not been announced yet.</p>
+                    )}
+                </div>
+
+                <div className="overflow-x-auto rounded border border-slate-200 bg-white">
+                    <table className="w-full min-w-3xl table-fixed text-left text-sm">
+                        <thead className="bg-slate-100 text-slate-600">
+                            <tr>
+                                <th className="w-12 px-3 py-2 font-semibold text-center">#</th>
+                                <th className="w-[28%] px-3 py-2 font-semibold">Batter</th>
+                                <th className="w-16 px-3 py-2 font-semibold text-center">Pos</th>
+                                <th className="w-16 px-3 py-2 font-semibold text-center">B/T</th>
+                                <th className="w-20 px-3 py-2 font-semibold text-center">AVG</th>
+                                <th className="w-20 px-3 py-2 font-semibold text-center">OBP</th>
+                                <th className="w-20 px-3 py-2 font-semibold text-center">SLG</th>
+                                <th className="w-20 px-3 py-2 font-semibold text-center">OPS</th>
+                                <th className="w-16 px-3 py-2 font-semibold text-center">HR</th>
+                                <th className="w-16 px-3 py-2 font-semibold text-center">RBI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {lineup.length === 0 ? (
+                                <tr>
+                                    <td colSpan={10} className="px-3 py-4 text-center text-slate-500">Starting lineup has not been posted yet.</td>
+                                </tr>
+                            ) : lineup.map(({ slot, player }) => (
+                                <tr key={`${slot}-${player.person.id}`} className="border-t border-slate-200 align-top odd:bg-white even:bg-slate-50">
+                                    <td className="px-3 py-2 text-center font-semibold text-slate-700">{slot}</td>
+                                    <td className="px-3 py-2 text-slate-700">
+                                        <div className="font-medium">{player.person.fullName}</div>
+                                    </td>
+                                    <td className="px-3 py-2 text-center text-slate-700">{getPlayerPosition(player)}</td>
+                                    <td className="px-3 py-2 text-center text-slate-700">{getPlayerBatThrows(gameData, player.person.id)}</td>
+                                    <td className="px-3 py-2 text-center text-slate-700">{formatPreviewDisplayStat(player.seasonStats.batting.avg)}</td>
+                                    <td className="px-3 py-2 text-center text-slate-700">{formatPreviewDisplayStat(player.seasonStats.batting.obp)}</td>
+                                    <td className="px-3 py-2 text-center text-slate-700">{formatPreviewDisplayStat(player.seasonStats.batting.slg)}</td>
+                                    <td className="px-3 py-2 text-center text-slate-700">{formatPreviewDisplayStat(player.seasonStats.batting.ops)}</td>
+                                    <td className="px-3 py-2 text-center text-slate-700">{formatPreviewCountStat(player.seasonStats.batting.homeRuns)}</td>
+                                    <td className="px-3 py-2 text-center text-slate-700">{formatPreviewCountStat(player.seasonStats.batting.rbi)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    );
+};
+
+const PreviewTabPanel = ({ gameData }: { gameData: GumboFeed }) => {
+    const awayBoxScore = gameData.liveData.boxscore.teams.away;
+    const homeBoxScore = gameData.liveData.boxscore.teams.home;
+
+    return (
+        <div
+            role="tabpanel"
+            id={getLiveGamePanelId("preview")}
+            aria-labelledby={getLiveGameTabId("preview")}
+            className="border border-t-0 border-slate-300 bg-white/40 px-4 py-5"
+        >
+            <div className="grid grid-cols-1 gap-6 2xl:grid-cols-2">
+                <PreviewTeamPanel team={awayBoxScore} gameData={gameData} />
+                <PreviewTeamPanel team={homeBoxScore} gameData={gameData} />
             </div>
         </div>
     );
