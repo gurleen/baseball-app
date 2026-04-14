@@ -108,14 +108,15 @@ export default function PitchingTable({ team, gameData }: PitchingTableProps) {
 					<table className="w-full min-w-lg table-fixed text-left text-sm">
 					<thead className="bg-slate-100 text-slate-600">
 						<tr>
-							<th className="w-[30%] px-3 py-2 font-semibold">Pitcher</th>
-							<th className="w-[10%] px-3 py-2 font-semibold text-center">IP</th>
-							<th className="w-[10%] px-3 py-2 font-semibold text-center">PIT-STR</th>
-							<th className="w-[10%] px-3 py-2 font-semibold text-center">H</th>
-							<th className="w-[10%] px-3 py-2 font-semibold text-center">ER</th>
-							<th className="w-[10%] px-3 py-2 font-semibold text-center">BB</th>
-							<th className="w-[10%] px-3 py-2 font-semibold text-center">K</th>
-							<th className="w-[10%] px-3 py-2 font-semibold text-center">HR</th>
+							<th className="w-[28%] px-3 py-2 font-semibold">Pitcher</th>
+							<th className="w-[9%] px-3 py-2 font-semibold text-center">IP</th>
+							<th className="w-[9%] px-3 py-2 font-semibold text-center">PIT-STR</th>
+							<th className="w-[9%] px-3 py-2 font-semibold text-center">H</th>
+							<th className="w-[9%] px-3 py-2 font-semibold text-center">R</th>
+							<th className="w-[9%] px-3 py-2 font-semibold text-center">ER</th>
+							<th className="w-[9%] px-3 py-2 font-semibold text-center">BB</th>
+							<th className="w-[9%] px-3 py-2 font-semibold text-center">K</th>
+							<th className="w-[9%] px-3 py-2 font-semibold text-center">HR</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -130,6 +131,7 @@ export default function PitchingTable({ team, gameData }: PitchingTableProps) {
 								<td className="px-3 py-2 text-center text-slate-700">{formatDisplayStat(player.stats.pitching.inningsPitched)}</td>
 								<td className="px-3 py-2 text-center text-slate-700">{formatPitchStrikeStat(player.stats.pitching.pitchesThrown, player.stats.pitching.strikes)}</td>
 								<td className="px-3 py-2 text-center text-slate-700">{formatNumberStat(player.stats.pitching.hits)}</td>
+								<td className="px-3 py-2 text-center text-slate-700">{formatNumberStat(player.stats.pitching.runs)}</td>
 								<td className="px-3 py-2 text-center text-slate-700">{formatNumberStat(player.stats.pitching.earnedRuns)}</td>
 								<td className="px-3 py-2 text-center text-slate-700">{formatNumberStat(player.stats.pitching.baseOnBalls)}</td>
 								<td className="px-3 py-2 text-center text-slate-700">{formatNumberStat(player.stats.pitching.strikeOuts)}</td>
@@ -141,6 +143,7 @@ export default function PitchingTable({ team, gameData }: PitchingTableProps) {
 							<td className="px-3 py-2 text-center font-semibold text-slate-800">{formatDisplayStat(totals.inningsPitched)}</td>
 							<td className="px-3 py-2 text-center font-semibold text-slate-800">{formatPitchStrikeStat(totals.pitchesThrown, totals.strikes)}</td>
 							<td className="px-3 py-2 text-center font-semibold text-slate-800">{formatNumberStat(totals.hits)}</td>
+							<td className="px-3 py-2 text-center font-semibold text-slate-800">{formatNumberStat(totals.runs)}</td>
 							<td className="px-3 py-2 text-center font-semibold text-slate-800">{formatNumberStat(totals.earnedRuns)}</td>
 							<td className="px-3 py-2 text-center font-semibold text-slate-800">{formatNumberStat(totals.baseOnBalls)}</td>
 							<td className="px-3 py-2 text-center font-semibold text-slate-800">{formatNumberStat(totals.strikeOuts)}</td>
