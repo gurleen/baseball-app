@@ -781,7 +781,7 @@ export type PitchCoordinates = z.infer<typeof PitchCoordinates>;
 
 export const PitchBreaks = z.object({
   /** Degrees clockwise (batter's view) that pitch plane deviates from vertical */
-  breakAngle: z.number(),
+  breakAngle: z.number().optional(),
   /** Max distance (inches) pitch separates from a straight-line path */
   breakLength: z.number().optional(),
   /** Distance from plate (feet) where break is greatest */
