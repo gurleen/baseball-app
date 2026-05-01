@@ -9,16 +9,29 @@
     "build": "bun run build.ts",
     "validate-gumbo": "bun run scripts/validate-gumbo.ts",
     "deploy": "wrangler deploy",
-    "preview": "wrangler dev"
+    "preview": "wrangler dev",
+    "server": "bun src/server/server.ts",
+    "server:watch": "bun --sql-preconnect --hot src/server/server.ts",
+    "db:generate": "bun run kysely-codegen --out-file ./src/types/db.d.ts"
   },
   "dependencies": {
+    "@trpc/client": "^11.17.0",
+    "@trpc/server": "^11.17.0",
+    "@types/pg": "^8.20.0",
+    "ag-grid-react": "^35.2.1",
     "bun-plugin-tailwind": "^0.0.15",
     "clsx": "^2.1.1",
     "fast-json-patch": "^3.1.1",
+    "immer": "^11.1.4",
+    "kysely": "^0.28.16",
+    "pg-types": "^4.1.0",
     "react": "^19",
+    "react-datepicker": "^9.1.0",
     "react-dom": "^19",
     "react-router": "^7.13.2",
+    "react-window": "^2.2.7",
     "tailwindcss": "^4.1.11",
+    "use-immer": "^0.11.0",
     "usehooks-ts": "^3.1.1",
     "zod": "^4.3.6"
   },
@@ -26,6 +39,8 @@
     "@types/bun": "latest",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "kysely-codegen": "^0.20.0",
+    "pg": "^8.20.0",
     "wrangler": "^4.81.1"
   }
 }
