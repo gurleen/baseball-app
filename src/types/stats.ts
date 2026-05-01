@@ -80,4 +80,4 @@ export const Teams = [
 "NYM"
 ];
 
-export const TeamOptions = Teams.map(x => ({ value: x, label: x }));
+export const TeamOptions = Teams.map(x => ({ value: x, label: x })).sort((a, b) => a.value.localeCompare(b.value));
