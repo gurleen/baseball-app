@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import plugin from "bun-plugin-tailwind";
 import { existsSync } from "fs";
-import { rm } from "fs/promises";
+import { rm, copyFile } from "fs/promises";
 import path from "path";
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
@@ -148,6 +148,13 @@ const result = await Bun.build({
 });
 
 const end = performance.now();
+
+// Copy favicon.ico if it exists
+const faviconSrc = path.resolve("src", "favicon.ico");
+const faviconDest = path.resolve(outdir, "favicon.ico");
+if (existsSync(faviconSrc)) {
+  await copyFile(faviconSrc, faviconDest);
+}
 
 const outputTable = result.outputs.map(output => ({
   File: path.relative(process.cwd(), output.path),

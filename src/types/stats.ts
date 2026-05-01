@@ -2,8 +2,7 @@ import * as z from "zod";
 
 export const Handedness = z.enum(["L", "R", "S"]);
 export type Handedness = z.infer<typeof Handedness>;
-export const HandednessOptions: { value: Handedness | undefined, label: string }[] = [
-    { value: undefined, label: "" },
+export const HandednessOptions: { value: Handedness, label: string }[] = [
     { value: "L", label: "Left" },
     { value: "R", label: "Right" },
     { value: "S", label: "Switch" },

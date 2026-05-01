@@ -23,7 +23,6 @@ export function useBattingStats(filters: BattingStatsFilters) {
             setErrorOccured(false);
 
             let stats = await fetchStatsSafe(filters);
-            console.log("Got", stats?.length ?? 0, "rows back.")
             if(stats) { setData(stats); }
             else { setErrorOccured(true); }
 

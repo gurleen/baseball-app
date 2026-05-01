@@ -5,6 +5,7 @@ import { HomeHeader } from "../components/home/HomeHeader";
 import { ScheduleError } from "../components/home/ScheduleError";
 import { ScheduleGameGrid } from "../components/home/ScheduleGameGrid";
 import { useSchedule } from "../hooks/useSchedule";
+import usePageTitle from "@/hooks/usePageTitle";
 
 function todayString() {
   const now = new Date();
@@ -117,6 +118,8 @@ function DateTile({ dateString, isSelected = false, disabled = false, onClick }:
 }
 
 export default function Home() {
+  usePageTitle("Home");
+
   const today = todayString();
   const [selectedDate, setSelectedDate] = useState(today);
   const scheduleDate = parseDateString(selectedDate) ? selectedDate : today;

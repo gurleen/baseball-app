@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { useGameData } from "@/hooks/useGameData";
-import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type MatchupPitch, type Linescore, type Play, type TeamData, type TeamLineScore, getPitcherSeasonStatsFromGumbo, getBatterSeasonStatsFromGumbo, BattingStats } from "@/types/gumbo";
+import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type MatchupPitch, type Linescore, type Play, type TeamData, type TeamLineScore, getPitcherSeasonStatsFromGumbo, getBatterSeasonStatsFromGumbo, BattingStats, GameData } from "@/types/gumbo";
 import { TeamLogo } from "@/components/TeamLogo";
 import clsx from "clsx";
 import { BaseballDiamond, BaseballOuts } from "@/components/Baseball";
@@ -14,6 +14,7 @@ import PreviewTabPanel from "./live-game/PreviewTabPanel";
 import SettingsTabPanel from "./live-game/SettingsTabPanel";
 import SummaryTabPanel from "./live-game/SummaryTabPanel";
 import { getLiveGamePanelId, getLiveGameTabId, type LiveGameTab } from "./live-game/shared";
+import usePageTitle from "@/hooks/usePageTitle";
 
 type GameDataContextValue = {
     gameData: GumboFeed;
@@ -75,10 +76,24 @@ function useLiveGameController() {
     return value;
 }
 
+function getPageTitle({gameData, liveData}: GumboFeed) {
+    const awayAbbr = gameData.teams.away.abbreviation;
+    const awayScore = liveData.linescore.teams.away.runs;
+    const homeAbbr = gameData.teams.home.abbreviation;
+    const homeScore = liveData.linescore.teams.home.runs;
+    const inningTopBot = liveData.linescore.isTopInning ? "↑" : "↓";
+    const inningOrdinal = liveData.linescore.currentInningOrdinal;
+
+    return `${awayAbbr} ${awayScore} @ ${homeAbbr} ${homeScore} ${inningTopBot} ${inningOrdinal}`;
+}
+
 function LiveGameSummary() {
     const gameData = useLiveGameContext();
     const currentPlay = gameData.liveData.plays.currentPlay;
     const gameIsFinal = isGameFinal(gameData);
+    
+    const title = useMemo(() => getPageTitle(gameData), [gameData]);
+    usePageTitle(title);
 
     return (
         <div className="flex flex-col items-center gap-8">
@@ -598,6 +613,7 @@ const TeamRecord = ({ team }: { team: TeamData }) => {
 }
 
 export default function LiveGame() {
+    usePageTitle("Live Game");
     const { gameId } = useParams();
 
     if (!gameId) {

@@ -3,6 +3,8 @@ import index from "./index.html";
 
 const server = serve({
   routes: {
+    "/favicon.ico": Bun.file("./src/favicon.ico"),
+
     // Serve index.html for all unmatched routes.
     "/*": index,
 

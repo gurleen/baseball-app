@@ -11,6 +11,7 @@ import { useBattingStats } from "@/hooks/useBattingStats";
 import { AgGridReact } from "ag-grid-react";
 import { themeBalham, type ColDef, type GridReadyEvent, type ValueFormatterParams } from "ag-grid-community";
 import { safeParseInt } from "@/util/parse";
+import usePageTitle from "@/hooks/usePageTitle";
 
 interface LabeledDatePickerProps {
     label: string;
@@ -60,12 +61,12 @@ function FiltersCard({ filters, setFilters }: FiltersState) {
 
                 <div className="flex flex-col gap-0.5">
                     <p className="text-sm font-light text-slate-800">Pitcher Hand</p>
-                    <Select className="w-40" defaultValue={undefined} options={HandednessOptions} onChange={h => setFilters(f => { f.pitcherHand = h?.value })} />
+                    <Select className="w-40" defaultValue={undefined} isClearable={true} options={HandednessOptions} onChange={h => setFilters(f => { f.pitcherHand = h?.value })} />
                 </div>
 
                 <div className="flex flex-col gap-0.5">
                     <p className="text-sm font-light text-slate-800">Batter Hand</p>
-                    <Select className="w-40" defaultValue={undefined} options={HandednessOptions} onChange={h => setFilters(f => { f.batterHand = h?.value })} />
+                    <Select className="w-40" defaultValue={undefined} isClearable={true} options={HandednessOptions} onChange={h => setFilters(f => { f.batterHand = h?.value })} />
                 </div>
 
                 <div className="flex gap-2 items-center">
@@ -96,6 +97,8 @@ function formatPercentage(value: number | undefined | null): string {
 
 
 export default function BattingStatsPage() {
+    usePageTitle("Batting Stats Search");
+
     const [filters, setFilters] = useImmer<BattingStatsFilters>(defaultFilters);
     const { data, isLoading, errorOccured } = useBattingStats(filters);
     const [colDefs, setColDefs] = useState<ColDef<BattingStats>[]>(([
@@ -106,10 +109,8 @@ export default function BattingStatsPage() {
         { field: "obp", headerName: "OBP", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" },
         { field: "slg", headerName: "SLG", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" },
         { field: "ops", headerName: "OPS", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" },
-        { field: "woba", headerName: "wOBA", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" },
+        { field: "woba", headerName: "wOBA", valueFormatter: p => formatPercentage(p.value), type: "numericColumn", sort: "desc" },
         { field: "xwoba", headerName: "xwOBA", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" },
-        // { field: "xba", headerName: "xBA", valueFormatter: p => formatPercentage(p.value) },
-        // { field: "xslg", headerName: "xSLG", valueFormatter: p => formatPercentage(p.value) },
         { field: "bb_rate", headerName: "BB%", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" }
     ]));
 
