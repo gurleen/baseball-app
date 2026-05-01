@@ -1,7 +1,7 @@
 import { BattingStats, type BattingStatsFilters } from "@/types/stats";
 import z from "zod";
 
-const BASE_URL = "http://localhost:3001";
+const BASE_URL = "https://baseball-api.gurleen.net/";
 
 async function postRequest<TSchema extends z.ZodTypeAny>(path: string, data: any, schema: TSchema): Promise<z.infer<TSchema>> {
     const url = new URL(path, BASE_URL);
