@@ -54,6 +54,25 @@ export interface DuckdbTables {
   relid: string;
 }
 
+export interface ParkFactors {
+  double: number | null;
+  FIP: number | null;
+  five_yr: number | null;
+  fly_ball: number | null;
+  game_year: number | null;
+  ground_ball: number | null;
+  home_run: number | null;
+  IFFB: number | null;
+  line_drive: number | null;
+  one_yr: number | null;
+  single: number | null;
+  strike_out: number | null;
+  team: string | null;
+  three_yr: number | null;
+  triple: number | null;
+  walk: number | null;
+}
+
 export interface PlayerIsQualified {
   batter: number | null;
   min_pa: Numeric | null;
@@ -91,7 +110,7 @@ export interface Statcast {
   api_break_x_batter_in: number | null;
   api_break_z_with_gravity: number | null;
   arm_angle: string | null;
-  at_bat_number: number | null;
+  at_bat_number: number;
   attack_angle: number | null;
   attack_direction: number | null;
   away_score: number | null;
@@ -129,7 +148,7 @@ export interface Statcast {
   fielder_9: number | null;
   fld_score: number | null;
   game_date: Timestamp | null;
-  game_pk: number | null;
+  game_pk: number;
   game_type: string | null;
   game_year: number | null;
   hc_x: number | null;
@@ -161,7 +180,7 @@ export interface Statcast {
   pfx_x: number | null;
   pfx_z: number | null;
   pitch_name: string | null;
-  pitch_number: number | null;
+  pitch_number: number;
   pitch_type: string | null;
   pitcher: number | null;
   pitcher_days_since_prev_game: string | null;
@@ -193,6 +212,21 @@ export interface Statcast {
   woba_denom: number | null;
   woba_value: number | null;
   zone: number | null;
+}
+
+export interface StatcastHomeRuns {
+  bat_speed: number | null;
+  bat_team: string | null;
+  batter: number | null;
+  events: string | null;
+  game_date: Timestamp | null;
+  game_pk: number | null;
+  hit_distance_sc: number | null;
+  launch_speed: number | null;
+  pitch_team: string | null;
+  pitcher: number | null;
+  pitcher_name: string | null;
+  swing_length: number | null;
 }
 
 export interface TeamQualifiers {
@@ -230,10 +264,12 @@ export interface DB {
   batting_logs: BattingLogs;
   "duckdb.extensions": DuckdbExtensions;
   "duckdb.tables": DuckdbTables;
+  park_factors: ParkFactors;
   player_is_qualified: PlayerIsQualified;
   player_qualifiers: PlayerQualifiers;
   players: Players;
   statcast: Statcast;
+  statcast_home_runs: StatcastHomeRuns;
   team_qualifiers: TeamQualifiers;
   teams: Teams;
   weights: Weights;

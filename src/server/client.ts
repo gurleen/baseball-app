@@ -1,4 +1,4 @@
-import { BattingStats, type BattingStatsFilters } from "@/types/stats";
+import { BattingStats, BattingStatsRow, type BattingStatsFilters } from "@/types/stats";
 import z from "zod";
 
 const BASE_URL = "https://baseball-api.gurleen.net/";
@@ -16,6 +16,6 @@ async function postRequest<TSchema extends z.ZodTypeAny>(path: string, data: any
     return schema.parse(payload);
 }
 
-export async function getBattingStats(filters: BattingStatsFilters): Promise<BattingStats[]> {
-    return await postRequest("api/batting", filters, z.array(BattingStats));
+export async function getBattingStats(filters: BattingStatsFilters): Promise<BattingStatsRow[]> {
+    return await postRequest("api/batting", filters, z.array(BattingStatsRow));
 }

@@ -1,5 +1,5 @@
 import { getBattingStats } from "@/server/client";
-import { BattingStats, type BattingStatsFilters } from "@/types/stats";
+import { BattingStatsRow, type BattingStatsFilters } from "@/types/stats";
 import { useEffect, useState } from "react";
 
 async function fetchStatsSafe(filters: BattingStatsFilters) {
@@ -12,7 +12,7 @@ async function fetchStatsSafe(filters: BattingStatsFilters) {
 }
 
 export function useBattingStats(filters: BattingStatsFilters) {
-    const [data, setData] = useState<BattingStats[]>();
+    const [data, setData] = useState<BattingStatsRow[]>();
     const [isLoading, setIsLoading] = useState(false);
     const [errorOccured, setErrorOccured] = useState(false);
 

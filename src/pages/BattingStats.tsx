@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/Card";
-import { BattingStats, BattingStatsFilters, HandednessOptions, TeamOptions } from "@/types/stats";
+import { BattingStats, BattingStatsFilters, BattingStatsRow, HandednessOptions, TeamOptions } from "@/types/stats";
 import DatePicker from "react-datepicker";
 import { useImmer, type Updater } from "use-immer";
 import Select from 'react-select'
@@ -101,7 +101,7 @@ export default function BattingStatsPage() {
 
     const [filters, setFilters] = useImmer<BattingStatsFilters>(defaultFilters);
     const { data, isLoading, errorOccured } = useBattingStats(filters);
-    const [colDefs, setColDefs] = useState<ColDef<BattingStats>[]>(([
+    const [colDefs, setColDefs] = useState<ColDef<BattingStatsRow>[]>(([
         { field: "full_name", headerName: "Name" },
         { field: "pa", headerName: "PA", type: "numericColumn" },
         { field: "ab", headerName: "AB", type: "numericColumn" },
@@ -110,11 +110,12 @@ export default function BattingStatsPage() {
         { field: "slg", headerName: "SLG", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" },
         { field: "ops", headerName: "OPS", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" },
         { field: "woba", headerName: "wOBA", valueFormatter: p => formatPercentage(p.value), type: "numericColumn", sort: "desc" },
-        { field: "xwoba", headerName: "xwOBA", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" },
-        { field: "bb_rate", headerName: "BB%", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" }
+        { field: "wrc_plus", headerName: "wRC+", type: "numericColumn" },
+        { field: "bb_pct", headerName: "BB%", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" },
+        { field: "so_pct", headerName: "K%", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" }
     ]));
 
-    const onGridReady = (e: GridReadyEvent<BattingStats>) => {
+    const onGridReady = (e: GridReadyEvent<BattingStatsRow>) => {
         e.api.autoSizeAllColumns();
     }
 

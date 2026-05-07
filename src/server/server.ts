@@ -1,4 +1,4 @@
-import { calculateBattingStats } from "@/repository/statcast";
+import { calculateBattingStats, getFilteredBattingStats } from "@/repository/statcast";
 import { BattingStatsFilters } from "@/types/stats";
 
 const CORS_HEADERS = {
@@ -17,9 +17,8 @@ const server = Bun.serve({
             POST: async (req) => {
                 const body = await req.json();
                 const filters = BattingStatsFilters.parse(body);
-                const query = calculateBattingStats(filters).orderBy("woba", ob => ob.desc().nullsLast());
-                const logs = await query.execute();
-                return jsonResponse(logs);
+                const rows = await getFilteredBattingStats(filters);
+                return jsonResponse(rows);
             }
         }
     },

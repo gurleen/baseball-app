@@ -1,5 +1,7 @@
 import * as z from "zod"; 
 
+export const OptionalNum = z.number().nullable().optional();
+
 export const Handedness = z.enum(["L", "R", "S"]);
 export type Handedness = z.infer<typeof Handedness>;
 export const HandednessOptions: { value: Handedness, label: string }[] = [
@@ -80,3 +82,26 @@ export const Teams = [
 ];
 
 export const TeamOptions = Teams.map(x => ({ value: x, label: x })).sort((a, b) => a.value.localeCompare(b.value));
+
+export const BattingStatsRow = z.object({
+    player_id: z.number(),
+    full_name: z.string(),
+    position_name: z.string().nullable(),
+    team: z.string().nullable(),
+    league: z.string().nullable(),
+    pa: z.number(),
+    ab: z.number(),
+    avg: OptionalNum,
+    obp: OptionalNum,
+    slg: OptionalNum,
+    ops: OptionalNum,
+    babip: OptionalNum,
+    woba: OptionalNum,
+    wraa: OptionalNum,
+    wrc: OptionalNum,
+    wrc_plus: OptionalNum,
+    bb_pct: OptionalNum,
+    so_pct: OptionalNum
+});
+
+export type BattingStatsRow = z.infer<typeof BattingStatsRow>;

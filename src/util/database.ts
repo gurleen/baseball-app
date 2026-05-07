@@ -7,6 +7,11 @@ console.log(process.env.DATABASE_URL);
 const int8TypeId = 20
 pg.types.setTypeParser(int8TypeId, (val) => {
   return parseInt(val, 10)
+});
+
+const numericTypeId = 1700;
+pg.types.setTypeParser(numericTypeId, val => {
+  return parseFloat(val);
 })
 
 const dialect = new PostgresDialect({
