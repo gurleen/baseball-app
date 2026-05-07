@@ -103,6 +103,7 @@ export default function BattingStatsPage() {
     const { data, isLoading, errorOccured } = useBattingStats(filters);
     const [colDefs, setColDefs] = useState<ColDef<BattingStatsRow>[]>(([
         { field: "full_name", headerName: "Name" },
+        { field: "team", headerName: "Team" },
         { field: "pa", headerName: "PA", type: "numericColumn" },
         { field: "ab", headerName: "AB", type: "numericColumn" },
         { field: "avg", headerName: "AVG", valueFormatter: p => formatPercentage(p.value), type: "numericColumn" },
