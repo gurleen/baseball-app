@@ -68,7 +68,10 @@ const PreviewTeamPanel = ({ team, gameData }: { team: BoxscoreTeamData; gameData
                             <div className="flex items-center gap-3">
                                 <PlayerImage playerId={startingPitcher.person.id} size={72} />
                                 <div>
-                                    <p className="text-lg font-semibold text-slate-900">{startingPitcher.person.fullName}</p>
+                                    <p className="text-lg font-semibold text-slate-900 flex gap-2 items-center">
+                                        <span className="text-sm font-light">{startingPitcher.jerseyNumber}</span>
+                                        {startingPitcher.person.fullName}
+                                    </p>
                                     <p className="text-sm text-slate-600">Throws {getPitcherThrows(gameData, startingPitcher.person.id)}</p>
                                 </div>
                             </div>
@@ -129,7 +132,10 @@ const PreviewTeamPanel = ({ team, gameData }: { team: BoxscoreTeamData; gameData
                                 <tr key={`${slot}-${player.person.id}`} className="border-t border-slate-200 align-top odd:bg-white even:bg-slate-50">
                                     <td className="px-3 py-2 text-center font-semibold text-slate-700">{slot}</td>
                                     <td className="px-3 py-2 text-slate-700">
-                                        <div className="font-medium">{player.person.fullName}</div>
+                                        <div className="font-medium flex items-center gap-2">
+                                            <span className="text-xs font-light">{player.jerseyNumber}</span>
+                                            <p>{player.person.fullName}</p>
+                                        </div>
                                     </td>
                                     <td className="px-3 py-2 text-center text-slate-700">{getPlayerPosition(player)}</td>
                                     <td className="px-3 py-2 text-center text-slate-700">{getPlayerBatThrows(gameData, player.person.id)}</td>
