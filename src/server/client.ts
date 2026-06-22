@@ -3,7 +3,9 @@ import { RPCLink } from '@orpc/client/fetch'
 import type { Router } from './router'
 
 const link = new RPCLink({
-    url: 'https://baseball-api.gurleen.net/rpc',
+    url: process.env.NODE_ENV === 'production'
+        ? 'https://baseball-api.gurleen.net/rpc'
+        : 'http://localhost:3001/rpc',
 })
 
 export const orpc = createORPCClient<Router>(link)
