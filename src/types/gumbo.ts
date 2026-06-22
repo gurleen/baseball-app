@@ -1538,7 +1538,7 @@ export const getMatchupPitchesFromPlay = (play: Play): MatchupPitch[] => {
     if (!reviewDetails && event.details.hasReview) {
       for (let j = i + 1; j < allEvents.length; j++) {
         const next = allEvents[j];
-        if (next.isPitch) break;
+        if (!next || next.isPitch) break;
         if (next.reviewDetails) {
           reviewDetails = next.reviewDetails;
           break;
