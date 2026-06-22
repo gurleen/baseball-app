@@ -1,16 +1,9 @@
-import z from "zod";
+import { createORPCClient } from '@orpc/client'
+import { RPCLink } from '@orpc/client/fetch'
+import type { Router } from './router'
 
-const BASE_URL = "https://baseball-api.gurleen.net/";
+const link = new RPCLink({
+    url: 'https://baseball-api.gurleen.net/rpc',
+})
 
-export async function postRequest<TSchema extends z.ZodTypeAny>(path: string, data: any, schema: TSchema): Promise<z.infer<TSchema>> {
-    const url = new URL(path, BASE_URL);
-    const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-        },
-        body: JSON.stringify(data),
-    });
-    const payload = await response.json();
-    return schema.parse(payload);
-}
+export const orpc = createORPCClient<Router>(link)
