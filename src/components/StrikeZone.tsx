@@ -20,24 +20,25 @@ const STRIKE_ZONE_WIDTH_INCHES = 17;
 const INCHES_PER_FOOT = 12;
 const STRIKE_ZONE_WIDTH_FEET = STRIKE_ZONE_WIDTH_INCHES / INCHES_PER_FOOT;
 
+// The widget is drawn against a fixed vertical frame so the ground line and
+// home plate stay put while the strike zone box rises/sinks and grows/shrinks
+// with each batter. FRAME_TOP_FEET is the height above the ground represented
+// by the top of the drawing area; it carries enough headroom for the tallest
+// realistic zone top (~3.8 ft).
+const SIDE_PADDING_FEET = 0.7;
+// Room below the ground line for the foreshortened home plate plus a small margin.
+const LOWER_PADDING_FEET = 0.95;
+const FRAME_TOP_FEET = 4.2;
+const VIEW_WIDTH_FEET = STRIKE_ZONE_WIDTH_FEET + SIDE_PADDING_FEET * 2;
+const VIEW_HEIGHT_FEET = FRAME_TOP_FEET + LOWER_PADDING_FEET;
+
 const clampToPositive = (value: number) => (Number.isFinite(value) ? Math.max(value, 0) : 0);
 const isMatchupPitch = (pitch: StrikeZonePitch): pitch is MatchupPitch => "pitchData" in pitch;
 
-export const getStrikeZoneHeight = ({
-	strikeZoneTop,
-	strikeZoneBottom,
-	width,
-}: StrikeZoneDimensionsInput) => {
-	const safeTop = clampToPositive(strikeZoneTop);
-	const safeBottom = clampToPositive(Math.min(strikeZoneBottom, safeTop));
-	const zoneHeightFeet = Math.max(safeTop - safeBottom, 0.1);
-	const sidePaddingFeet = 0.7;
-	const upperPaddingFeet = 0.7;
-	const lowerPaddingFeet = 0.45;
-	const viewWidthFeet = STRIKE_ZONE_WIDTH_FEET + sidePaddingFeet * 2;
-	const viewHeightFeet = safeTop + upperPaddingFeet + lowerPaddingFeet;
-
-	return width * (viewHeightFeet / viewWidthFeet);
+// The frame is fixed, so the height depends only on the widget width. The
+// batter dimensions are still accepted for a stable call signature.
+export const getStrikeZoneHeight = ({ width }: StrikeZoneDimensionsInput) => {
+	return width * (VIEW_HEIGHT_FEET / VIEW_WIDTH_FEET);
 };
 
 const getPitchMarkerColor = (pitch: StrikeZonePitch) => {
@@ -73,31 +74,43 @@ export function StrikeZone({
 }: StrikeZoneProps) {
 	const safeTop = clampToPositive(strikeZoneTop);
 	const safeBottom = clampToPositive(Math.min(strikeZoneBottom, safeTop));
-	const zoneHeightFeet = Math.max(safeTop - safeBottom, 0.1);
+	// Clamp the drawn top to the frame so an unusually tall zone never spills
+	// off the top of the widget.
+	const displayTop = Math.min(safeTop, FRAME_TOP_FEET);
 
-	const sidePaddingFeet = 0.7;
-	const upperPaddingFeet = 0.7;
-	const lowerPaddingFeet = 0.45;
-
-	const viewWidthFeet = STRIKE_ZONE_WIDTH_FEET + sidePaddingFeet * 2;
-	const viewHeightFeet = safeTop + upperPaddingFeet + lowerPaddingFeet;
 	const height = getStrikeZoneHeight({ strikeZoneTop, strikeZoneBottom, width });
 
-	const horizontalScale = width / viewWidthFeet;
-	const verticalScale = height / viewHeightFeet;
+	const horizontalScale = width / VIEW_WIDTH_FEET;
+	const verticalScale = height / VIEW_HEIGHT_FEET;
 
-	const zoneLeft = sidePaddingFeet * horizontalScale;
+	// Map a height above the ground (in feet) to a y coordinate in the fixed frame.
+	const yForHeight = (feet: number) => (FRAME_TOP_FEET - feet) * verticalScale;
+
+	const zoneLeft = SIDE_PADDING_FEET * horizontalScale;
 	const zoneWidth = STRIKE_ZONE_WIDTH_FEET * horizontalScale;
-	const zoneTopY = (upperPaddingFeet + (safeTop - safeTop)) * verticalScale;
-	const zoneBottomY = (upperPaddingFeet + zoneHeightFeet) * verticalScale;
+	const zoneTopY = yForHeight(displayTop);
+	const zoneBottomY = yForHeight(safeBottom);
 	const zoneHeight = zoneBottomY - zoneTopY;
 	const columnWidth = zoneWidth / 3;
 	const rowHeight = zoneHeight / 3;
-	const groundY = (upperPaddingFeet + safeTop + lowerPaddingFeet * 0.72) * verticalScale;
-	const plateTopY = groundY + 8;
-	const plateDepth = 22;
-	const plateShoulderInset = zoneWidth * 0.18;
-	const platePointDepth = 14;
+	const groundY = yForHeight(0);
+
+	// Home plate as the catcher sees it from a low vantage. The regulation plate
+	// is a 17 in edge facing the pitcher, two 8.5 in parallel sides, and two 12 in
+	// edges meeting at a right-angle point facing the catcher. Drawn in
+	// perspective: the far (pitcher-side) edge recedes so it appears narrower at
+	// the top, the sides widen toward the viewer to the near shoulders, and the
+	// point comes toward the viewer at the bottom. The depth is foreshortened so
+	// the plate reads as lying flat on the ground rather than standing upright.
+	const plateWidth = zoneWidth;
+	const plateGap = verticalScale * 0.08;
+	const plateDepth = plateWidth * 0.52;
+	const plateBackHalf = (plateWidth / 2) * 0.72;
+	const plateShoulderHalf = plateWidth / 2;
+	const plateCenterX = zoneLeft + zoneWidth / 2;
+	const plateTopY = groundY + plateGap;
+	const plateShoulderY = plateTopY + plateDepth * 0.45;
+	const platePointY = plateTopY + plateDepth;
 	const pitchRadius = Math.max(4, zoneWidth * 0.055);
 
 	const plottedPitches = pitches
@@ -118,7 +131,7 @@ export function StrikeZone({
 				id: `${index}-${pitchData.startSpeed ?? "pitch"}`,
 				label: index + 1,
 				cx: zoneLeft + zoneWidth / 2 + pitchX * horizontalScale,
-				cy: (upperPaddingFeet + (safeTop - pitchZ)) * verticalScale,
+				cy: yForHeight(pitchZ),
 				fill: getPitchMarkerColor(pitch),
 			};
 		})
@@ -225,11 +238,11 @@ export function StrikeZone({
 
 				<path
 					d={[
-						`M ${zoneLeft} ${plateTopY}`,
-						`L ${zoneLeft + zoneWidth} ${plateTopY}`,
-						`L ${zoneLeft + zoneWidth - plateShoulderInset} ${plateTopY + plateDepth * 0.45}`,
-						`L ${zoneLeft + zoneWidth / 2} ${plateTopY + plateDepth + platePointDepth}`,
-						`L ${zoneLeft + plateShoulderInset} ${plateTopY + plateDepth * 0.45}`,
+						`M ${plateCenterX - plateBackHalf} ${plateTopY}`,
+						`L ${plateCenterX + plateBackHalf} ${plateTopY}`,
+						`L ${plateCenterX + plateShoulderHalf} ${plateShoulderY}`,
+						`L ${plateCenterX} ${platePointY}`,
+						`L ${plateCenterX - plateShoulderHalf} ${plateShoulderY}`,
 						'Z',
 					].join(' ')}
 					fill="#F5F5F4"

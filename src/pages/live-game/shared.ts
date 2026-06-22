@@ -1,6 +1,6 @@
 import type { BoxscorePlayer, BoxscoreTeamData, GumboFeed } from "@/types/gumbo";
 
-export type LiveGameTab = "summary" | "preview" | "at-bat" | "offense" | "pitching" | "settings";
+export type LiveGameTab = "summary" | "preview" | "at-bat" | "offense" | "pitching" | "abs" | "settings";
 
 export const getLiveGameTabId = (tab: LiveGameTab) => `live-game-${tab}-tab`;
 

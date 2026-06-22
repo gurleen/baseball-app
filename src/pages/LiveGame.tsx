@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { useGameData } from "@/hooks/useGameData";
 import { getBatterStatsFromGumbo, getCurrentMatchupPitches, getPitcherStatsFromGumbo, getPlayerFromGumbo, type GumboFeed, type MatchupPitch, type Linescore, type Play, type TeamData, type TeamLineScore, getPitcherSeasonStatsFromGumbo, getBatterSeasonStatsFromGumbo, BattingStats, GameData } from "@/types/gumbo";
@@ -13,6 +13,7 @@ import PitchingTabPanel from "./live-game/PitchingTabPanel";
 import PreviewTabPanel from "./live-game/PreviewTabPanel";
 import SettingsTabPanel from "./live-game/SettingsTabPanel";
 import SummaryTabPanel from "./live-game/SummaryTabPanel";
+import AbsTabPanel from "./live-game/AbsTabPanel";
 import { getLiveGamePanelId, getLiveGameTabId, type LiveGameTab } from "./live-game/shared";
 import usePageTitle from "@/hooks/usePageTitle";
 
@@ -106,7 +107,7 @@ function LiveGameSummary() {
                 </div>
 
                 <div className="flex flex-col h-full justify-between gap-12">
-                    <LinescoreTable linescore={gameData.liveData.linescore} awayTeam={gameData.gameData.teams.away} homeTeam={gameData.gameData.teams.home} />
+                    <LinescoreTable linescore={gameData.liveData.linescore} awayTeam={gameData.gameData.teams.away} homeTeam={gameData.gameData.teams.home} moundVisits={gameData.gameData.moundVisits} />
                     <GameStatusBox linescore={gameData.liveData.linescore} />
                 </div>
 
@@ -146,6 +147,7 @@ const CurrentMatchupStrikeZone = () => {
 
         return window.innerWidth < 640 ? MOBILE_STRIKE_ZONE_WIDTH : DESKTOP_STRIKE_ZONE_WIDTH;
     });
+    const hasAutoSwitchedToSummaryRef = useRef(false);
 
     useEffect(() => {
         const updateStrikeZoneWidth = () => {
@@ -160,9 +162,14 @@ const CurrentMatchupStrikeZone = () => {
 
     useEffect(() => {
         if (gameIsFinal) {
-            setActiveTab((currentTab) => currentTab === "summary" ? currentTab : "summary");
+            if (!hasAutoSwitchedToSummaryRef.current) {
+                hasAutoSwitchedToSummaryRef.current = true;
+                setActiveTab((currentTab) => currentTab === "summary" ? currentTab : "summary");
+            }
             return;
         }
+
+        hasAutoSwitchedToSummaryRef.current = false;
 
         setActiveTab((currentTab) => {
             if (currentTab !== "summary") {
@@ -274,6 +281,14 @@ const CurrentMatchupStrikeZone = () => {
                     activeTab={activeTab}
                     onSelect={setActiveTab}
                 />
+                {gameData.gameData.absChallenges && (
+                    <LiveGameTabButton
+                        tab="abs"
+                        label="ABS"
+                        activeTab={activeTab}
+                        onSelect={setActiveTab}
+                    />
+                )}
                 <LiveGameTabButton
                     tab="settings"
                     label="SETTINGS"
@@ -296,6 +311,7 @@ const CurrentMatchupStrikeZone = () => {
             )}
             {activeTab === "offense" && <OffenseTabPanel gameData={gameData} />}
             {activeTab === "pitching" && <PitchingTabPanel gameData={gameData} />}
+            {activeTab === "abs" && <AbsTabPanel gameData={gameData} />}
             {activeTab === "settings" && (
                 <SettingsTabPanel
                     latestPitch={settingsPitch}
@@ -452,7 +468,7 @@ const CurrentBatterCard = () => {
     )
 }
 
-const LinescoreTable = ({ linescore, awayTeam, homeTeam }: { linescore: Linescore, awayTeam: TeamData, homeTeam: TeamData }) => {
+const LinescoreTable = ({ linescore, awayTeam, homeTeam, moundVisits }: { linescore: Linescore, awayTeam: TeamData, homeTeam: TeamData, moundVisits?: { away: { remaining: number }, home: { remaining: number } } }) => {
     const currentInning = linescore.currentInning || 0;
     const isTopInning = linescore.inningHalf === "Top";
     const totalInnings = Math.max(9, currentInning, ...linescore.innings.map((inning) => inning.num));
@@ -470,6 +486,8 @@ const LinescoreTable = ({ linescore, awayTeam, homeTeam }: { linescore: Linescor
                     <th className="ps-10 pe-2">R</th>
                     <th className="px-2">H</th>
                     <th className="px-2">E</th>
+                    <th className="px-2">LOB</th>
+                    {moundVisits && <th className="px-2">MVR</th>}
                 </tr>
             </thead>
             <tbody>
@@ -488,6 +506,8 @@ const LinescoreTable = ({ linescore, awayTeam, homeTeam }: { linescore: Linescor
                     <td className="ps-10 pe-2 font-bold">{linescore.teams.away.runs}</td>
                     <td className="px-2 font-bold">{linescore.teams.away.hits}</td>
                     <td className="px-2 font-bold">{linescore.teams.away.errors}</td>
+                    <td className="px-2 font-bold">{linescore.teams.away.leftOnBase ?? "-"}</td>
+                    {moundVisits && <td className="px-2 font-bold">{moundVisits.away.remaining}</td>}
                 </tr>
                 <tr>
                     <td className="font-bold pe-5">{homeTeam.abbreviation}</td>
@@ -504,6 +524,8 @@ const LinescoreTable = ({ linescore, awayTeam, homeTeam }: { linescore: Linescor
                     <td className="ps-10 pe-2 font-bold">{linescore.teams.home.runs}</td>
                     <td className="px-2 font-bold">{linescore.teams.home.hits}</td>
                     <td className="px-2 font-bold">{linescore.teams.home.errors}</td>
+                    <td className="px-2 font-bold">{linescore.teams.home.leftOnBase ?? "-"}</td>
+                    {moundVisits && <td className="px-2 font-bold">{moundVisits.home.remaining}</td>}
                 </tr>
             </tbody>
         </table>

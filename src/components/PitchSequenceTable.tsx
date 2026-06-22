@@ -62,6 +62,33 @@ const formatPitchSpinRate = (spinRate?: number, compact?: boolean) => {
 	return spinRate.toFixed(0);
 };
 
+const getTrueStrike = (pitch: MatchupPitch): boolean | null => {
+	const zone = pitch.pitchData.zone;
+	if (typeof zone !== "number") return null;
+	if (zone >= 1 && zone <= 9) return true;
+	if (zone >= 11 && zone <= 14) return false;
+	return null;
+};
+
+const isBadCall = (pitch: MatchupPitch): boolean => {
+	const trueStrike = getTrueStrike(pitch);
+	if (trueStrike === null) return false;
+	const isCalledStrike = pitch.callCode === "C";
+	const isCalledBall = pitch.callCode === "B";
+	return (isCalledStrike && !trueStrike) || (isCalledBall && trueStrike);
+};
+
+type AbsResult = "overturned" | "confirmed" | null;
+
+const getAbsResult = (pitch: MatchupPitch): AbsResult => {
+	const review = pitch.reviewDetails;
+	if (!review) return null;
+	if (review.reviewType === "MJ") {
+		return review.isOverturned ? "overturned" : "confirmed";
+	}
+	return null;
+};
+
 const formatPitchResult = (result?: string) => {
 	if (!result) {
 		return "-";
@@ -104,6 +131,7 @@ export default function PitchSequenceTable({
 	const typeWidth = compact ? "w-14" : "w-16";
 	const resultWidth = compact ? "w-20" : "w-24";
 	const breakWidth = compact ? "w-14" : "w-16";
+	const zoneWidth = compact ? "w-12" : "w-14";
 
 	return (
 		<table className={clsx(tableClassName, className)}>
@@ -114,6 +142,7 @@ export default function PitchSequenceTable({
 					<th className={clsx(spinWidth, headerCellClassName)}>Spin</th>
 					<th className={clsx(typeWidth, headerCellClassName)}>Type</th>
 					<th className={clsx(resultWidth, headerCellClassName)}>Result</th>
+					<th className={clsx(zoneWidth, headerCellClassName)}>Zone</th>
 					<th className={clsx(breakWidth, headerCellClassName)}>HB</th>
 					<th className={clsx(breakWidth, headerCellClassName)}>IVB</th>
 				</tr>
@@ -123,7 +152,13 @@ export default function PitchSequenceTable({
 				{orderedPitches.map((pitch, index) => (
 					<tr
 						key={`${index}-${pitch.pitchData.startSpeed ?? "pitch"}`}
-						className="border-t border-slate-200 align-top odd:bg-white even:bg-slate-50"
+						className={clsx("border-t border-slate-200 align-top", (() => {
+							const abs = getAbsResult(pitch);
+							if (abs === "overturned") return "bg-violet-50";
+							if (abs === "confirmed") return "bg-sky-50";
+							if (isBadCall(pitch)) return "bg-amber-50";
+							return "odd:bg-white even:bg-slate-50";
+						})())}
 					>
 						<td className={numberCellClassName}>
 							<div className={clsx("flex items-center", compact ? "gap-1.5" : "gap-2")}>
@@ -137,8 +172,22 @@ export default function PitchSequenceTable({
 						<td className={bodyCellClassName}>
 							{formatPitchSpinRate(pitch.pitchData.breaks?.spinRate, compact)}
 						</td>
-						<td className={bodyCellClassName}>{formatPitchType(pitch.pitchType)}</td>
+						<td className={bodyCellClassName} title={pitch.pitchType}>{formatPitchType(pitch.pitchType)}</td>
 						<td className={clsx(bodyCellClassName, "whitespace-normal")}>{formatPitchResultAndCount(pitch)}</td>
+						<td className={bodyCellClassName}>
+							{(() => {
+								const trueStrike = getTrueStrike(pitch);
+								if (trueStrike === null) return <span className="text-slate-400">-</span>;
+								const abs = getAbsResult(pitch);
+								const highlight = abs === "overturned" ? "text-violet-600"
+									: abs === "confirmed" ? "text-sky-600"
+									: isBadCall(pitch) ? "text-amber-600"
+									: null;
+								return trueStrike
+									? <span className={clsx("font-semibold", highlight ?? "text-green-700")}>In</span>
+									: <span className={clsx("font-semibold", highlight ?? "text-slate-500")}>Out</span>;
+							})()}
+						</td>
 						<td className={bodyCellClassName}>{formatPitchBreak(pitch.pitchData.breaks?.breakHorizontal)}</td>
 						<td className={bodyCellClassName}>{formatPitchBreak(pitch.pitchData.breaks?.breakVerticalInduced)}</td>
 					</tr>

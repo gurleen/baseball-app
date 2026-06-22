@@ -49,15 +49,21 @@ const isSpecialEventType = (eventType?: string) => {
 
 	return (
 		eventType === "pitching_substitution"
+		|| eventType === "offensive_substitution"
 		|| eventType === "defensive_switch"
 		|| eventType === "defensive_substitution"
 		|| eventType === "mound_visit"
+		|| eventType === "balk"
 		|| matchesEventType(eventType, "stolen_base")
 		|| matchesEventType(eventType, "caught_stealing")
 		|| matchesEventType(eventType, "pickoff_caught_stealing")
 		|| isPickoffAttemptEventType(eventType)
 	);
 };
+
+// For these types the action event already contains a complete description
+// covering all runner movements — suppress the redundant runner-level entries.
+const isActionEventOnlyType = (eventType?: string) => eventType === "balk";
 
 const formatInningLabel = (play: Play) => {
 	const half = play.about.halfInning === "top" ? "Top" : "Bottom";
@@ -95,8 +101,16 @@ const getSpecialEventBadgeLabel = (event: SpecialEvent) => {
 		return "Pitching Change";
 	}
 
+	if (eventType === "offensive_substitution") {
+		return "Offensive Change";
+	}
+
 	if (eventType === "defensive_substitution" || eventType === "defensive_switch") {
 		return "Defensive Change";
+	}
+
+	if (eventType === "balk") {
+		return "Balk";
 	}
 
 	if (matchesEventType(eventType, "stolen_base")) {
@@ -132,6 +146,20 @@ const getSpecialEventStyles = (event: SpecialEvent) => {
 		return {
 			container: "border-rose-300 bg-rose-50",
 			badge: "bg-rose-700 text-white",
+		};
+	}
+
+	if (eventType === "offensive_substitution") {
+		return {
+			container: "border-blue-300 bg-blue-50",
+			badge: "bg-blue-700 text-white",
+		};
+	}
+
+	if (eventType === "balk") {
+		return {
+			container: "border-yellow-300 bg-yellow-50",
+			badge: "bg-yellow-700 text-white",
 		};
 	}
 
@@ -194,7 +222,7 @@ const getSpecialEvents = (play: Play) => {
 	const runnerEvents = play.runners.flatMap((runner, runnerIndex) => {
 		const eventType = getNormalizedEventType(runner.details.eventType);
 
-		if (!isSpecialEventType(eventType)) {
+		if (!isSpecialEventType(eventType) || isActionEventOnlyType(eventType)) {
 			return [];
 		}
 

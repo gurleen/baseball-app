@@ -1,0 +1,74 @@
+prql target:sql.postgres
+
+let swing_event_types = [
+    "foul",
+    "foul_tip",
+    "hit_into_play",
+    "hit_into_play_no_out",
+    "hit_into_play_score",
+    "foul_bunt",
+    "bunt_foul_tip",
+]
+
+let as_count = cond -> case [
+    cond => 1,
+    true => 0
+]
+
+let events = (
+    from statcast
+    filter game_year == 2026
+)
+
+let base_stats = (
+    from events
+    group {batter} (
+        aggregate {
+            xwoba = (average estimated_woba_using_speedangle | math.round 3),
+            xba = (average estimated_ba_using_speedangle | math.round 3),
+            xslg = (average estimated_slg_using_speedangle | math.round 3)
+        }
+    )
+)
+
+let batted_ball_events = (
+    from events
+    filter is_batted_ball
+    derive {
+        is_barrel = (launch_speed_angle == 6 | as_count),
+        is_hard_hit = (launch_speed >= 95 | as_count),
+        is_la_swsp = (launch_angle >= 8 && launch_angle <= 32 | as_count)
+    }
+)
+
+from batted_ball_events
+group {batter} (
+    aggregate {
+        bbe = count true,
+        barrels = sum is_barrel,
+        hard_hits = sum is_hard_hit,
+        la_swsp_hits = sum is_la_swsp,
+        exit_velo = (average launch_speed | math.round 1),
+        bat_speed = (average bat_speed | math.round 1),
+    }
+)
+join side:left base_stats (==batter)
+derive {
+    barrel_pct = (barrels / bbe | math.round 3),
+    hard_hit_pct = (hard_hits / bbe | math.round 3),
+    la_swsp_pct = (la_swsp_hits / bbe | math.round 3),
+}
+join side:left players (batted_ball_events.batter == players.id)
+select {
+    players.full_name,
+    bbe,
+    xwoba,
+    xwoba_rank = s"RANK() OVER (ORDER BY xwoba DESC)",
+    xba,
+    xslg,
+    exit_velo,
+    barrel_pct,
+    hard_hit_pct,
+    bat_speed
+}
+sort {-bat_speed}

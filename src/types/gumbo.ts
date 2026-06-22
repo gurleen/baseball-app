@@ -1516,28 +1516,52 @@ export type MatchupPitch = {
   pitchType?: string;
   result?: string;
   count?: string;
+  /** Raw pitch call code from /api/v1/pitchCodes — e.g. "B" ball, "C" called strike, "S" swinging strike */
+  callCode?: string;
+  /** Present when the pitch was reviewed (ABS challenge or manager challenge) */
+  reviewDetails?: ReviewDetails;
 };
 
 export const getMatchupPitchesFromPlay = (play: Play): MatchupPitch[] => {
-  const pitches = play.playEvents.filter(event => event.isPitch);
+  const allEvents = play.playEvents;
 
-  return pitches.reduce<MatchupPitch[]>((allPitches, pitch) => {
-    if (!pitch.pitchData) {
+  return allEvents.reduce<MatchupPitch[]>((allPitches, event, i) => {
+    if (!event.isPitch || !event.pitchData) {
       return allPitches;
     }
 
-    const matchupPitch: MatchupPitch = {
-      pitchData: pitch.pitchData,
-      isStrike: pitch.details.isStrike,
-      isBall: pitch.details.isBall,
-      isInPlay: pitch.details.isInPlay,
-      isOut: pitch.details.isOut,
-      pitchType: pitch.details.type?.description,
-      result: pitch.details.call?.description ?? pitch.details.description,
-      count: `${pitch.count.balls}-${pitch.count.strikes}`,
-    };
+    // reviewDetails can come from three places, in priority order:
+    // 1. Directly on the pitch event (older feed pattern, reviewType "MJ")
+    // 2. On the next action event immediately after this pitch (also older pattern)
+    // 3. On the play itself — applies to the last pitch of the at-bat (newer pattern)
+    let reviewDetails = event.reviewDetails;
+    if (!reviewDetails && event.details.hasReview) {
+      for (let j = i + 1; j < allEvents.length; j++) {
+        const next = allEvents[j];
+        if (next.isPitch) break;
+        if (next.reviewDetails) {
+          reviewDetails = next.reviewDetails;
+          break;
+        }
+      }
+    }
+    const isLastPitch = allEvents.slice(i + 1).every((e) => !e.isPitch);
+    if (!reviewDetails && isLastPitch && play.reviewDetails?.reviewType === "MJ") {
+      reviewDetails = play.reviewDetails;
+    }
 
-    allPitches.push(matchupPitch);
+    allPitches.push({
+      pitchData: event.pitchData,
+      isStrike: event.details.isStrike,
+      isBall: event.details.isBall,
+      isInPlay: event.details.isInPlay,
+      isOut: event.details.isOut,
+      pitchType: event.details.type?.description,
+      result: event.details.call?.description ?? event.details.description,
+      count: `${event.count.balls}-${event.count.strikes}`,
+      callCode: event.details.call?.code,
+      reviewDetails,
+    });
     return allPitches;
   }, []);
 }

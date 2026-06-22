@@ -1,0 +1,19 @@
+prql target:sql.postgres
+
+let as_count = cond -> case [
+    cond => 1,
+    true => 0
+]
+
+let games = (
+    from statcast
+)
+
+from statcast_extra
+filter is_abs_challenge == true
+join side:left players (statcast_extra.abs_challenge_challenging_player_id == players.id)
+filter players.full_name == 'J.T. Realmuto'
+derive {
+    edge_distance_in = (statcast_extra.abs_challenge_edge_distance * 12 | math.round 1)
+}
+sort {statcast_extra.game_pk, statcast_extra.ab_number}
